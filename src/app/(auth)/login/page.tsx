@@ -16,6 +16,12 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { AlertCircle } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 const formSchema = z.object({
     email: z.string().email({
@@ -27,6 +33,10 @@ const formSchema = z.object({
 })
 
 export default function LoginPage() {
+    const router = useRouter();
+    const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -35,8 +45,36 @@ export default function LoginPage() {
         },
     })
 
-    function onSubmit(values: z.infer<typeof formSchema>) {
-        console.log(values)
+    async function onSubmit(values: z.infer<typeof formSchema>) {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await fetch(`${API_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(values),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.message || 'Đăng nhập thất bại');
+            }
+
+            const data = await res.json();
+            localStorage.setItem('accessToken', data.access_token);
+
+            // Redirect based on role
+            if (data.user?.role === 'vendor') {
+                router.push('/seller/dashboard');
+            } else {
+                router.push('/');
+            }
+            router.refresh();
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (
@@ -48,6 +86,12 @@ export default function LoginPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent>
+                {error && (
+                    <Alert variant="destructive" className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                         <FormField
@@ -76,7 +120,9 @@ export default function LoginPage() {
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">Đăng nhập</Button>
+                        <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
+                            {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+                        </Button>
                     </form>
                 </Form>
             </CardContent>

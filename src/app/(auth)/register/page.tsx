@@ -17,6 +17,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { AlertCircle } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 const formSchema = z.object({
     name: z.string().min(2, {
@@ -32,6 +38,10 @@ const formSchema = z.object({
 })
 
 export default function RegisterPage() {
+    const router = useRouter();
+    const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -42,6 +52,30 @@ export default function RegisterPage() {
         },
     })
 
+    async function onSubmit(values: z.infer<typeof formSchema>) {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await fetch(`${API_URL}/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...values, fullName: values.name }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.message || 'Đăng ký thất bại');
+            }
+
+            alert('Đăng ký thành công! Vui lòng đăng nhập.');
+            router.push('/login');
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }
+
     return (
         <Card className="border-none shadow-lg">
             <CardHeader className="space-y-1">
@@ -51,6 +85,12 @@ export default function RegisterPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent>
+                {error && (
+                    <Alert variant="destructive" className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
                 <Tabs defaultValue="buyer" className="w-full" onValueChange={(val) => form.setValue("role", val as "buyer" | "vendor")}>
                     <TabsList className="grid w-full grid-cols-2 mb-4">
                         <TabsTrigger value="buyer">Người mua</TabsTrigger>
@@ -59,7 +99,7 @@ export default function RegisterPage() {
                 </Tabs>
 
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit((values) => console.log(values))} className="space-y-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                         <FormField
                             control={form.control}
                             name="name"
@@ -99,7 +139,9 @@ export default function RegisterPage() {
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">Đăng ký</Button>
+                        <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
+                            {loading ? "Đang đăng ký..." : "Đăng ký"}
+                        </Button>
                     </form>
                 </Form>
             </CardContent>

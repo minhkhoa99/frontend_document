@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { UploadCloud, File, X, CheckCircle, AlertCircle } from 'lucide-react';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
 interface Category {
     id: string;
     name: string;
@@ -32,7 +34,7 @@ export default function UploadPage() {
 
     useEffect(() => {
         // Fetch categories
-        fetch('http://localhost:4000/categories')
+        fetch(`${API_URL}/categories`)
             .then((res) => res.json())
             .then((data) => setCategories(data))
             .catch((err) => console.error('Failed to fetch categories', err));
@@ -49,9 +51,14 @@ export default function UploadPage() {
             formData.append('file', selectedFile);
 
             try {
-                const res = await fetch('http://localhost:4000/documents/upload', {
+                const res = await fetch(`${API_URL}/documents/upload`, {
                     method: 'POST',
                     body: formData,
+                    // Note: Multipart upload usually doesn't need Content-Type header manually set, browser does it.
+                    // But might need Auth header if upload endpoint is protected.
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                    }
                 });
 
                 if (!res.ok) throw new Error('File upload failed');
@@ -80,10 +87,12 @@ export default function UploadPage() {
         setError(null);
 
         try {
-            const res = await fetch('http://localhost:4000/documents', {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch(`${API_URL}/documents`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
                     title: formData.title,
@@ -110,24 +119,24 @@ export default function UploadPage() {
         <div className="min-h-screen bg-gray-50/50 py-12 px-4 sm:px-6 lg:px-8 flex justify-center">
             <Card className="w-full max-w-2xl shadow-lg border-0 bg-white">
                 <CardHeader>
-                    <CardTitle className="text-2xl font-bold text-gray-900">Upload Document</CardTitle>
-                    <CardDescription>Share your knowledge and earn revenue.</CardDescription>
+                    <CardTitle className="text-2xl font-bold text-gray-900">Tải lên tài liệu</CardTitle>
+                    <CardDescription>Chia sẻ kiến thức và kiếm thêm thu nhập một cách dễ dàng.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
 
                         {/* File Upload Area */}
                         <div className="space-y-2">
-                            <Label>Document File (PDF)</Label>
+                            <Label>Tệp tài liệu (PDF)</Label>
                             <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${file ? 'border-green-500 bg-green-50/30' : 'border-gray-300 hover:border-primary/50'}`}>
                                 {!file ? (
                                     <label className="cursor-pointer block w-full h-full">
                                         <UploadCloud className="mx-auto h-12 w-12 text-gray-400" />
                                         <span className="mt-2 block text-sm font-medium text-gray-900">
-                                            Click to upload or drag and drop
+                                            Nhấn để tải lên hoặc kéo thả vào đây
                                         </span>
                                         <span className="mt-1 block text-xs text-gray-500">
-                                            PDF up to 50MB
+                                            PDF tối đa 50MB
                                         </span>
                                         <input
                                             type="file"
@@ -161,10 +170,10 @@ export default function UploadPage() {
 
                         {/* Title */}
                         <div className="space-y-2">
-                            <Label htmlFor="title">Title</Label>
+                            <Label htmlFor="title">Tiêu đề tài liệu</Label>
                             <Input
                                 id="title"
-                                placeholder="Ex: Advanced Calculus Midterm Implementation"
+                                placeholder="VD: Giáo án Toán 12 Học kì 1 - Cánh Diều"
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                 required
@@ -173,7 +182,7 @@ export default function UploadPage() {
 
                         {/* Category */}
                         <div className="space-y-2">
-                            <Label htmlFor="category">Category</Label>
+                            <Label htmlFor="category">Danh mục</Label>
                             <select
                                 id="category"
                                 className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -181,7 +190,7 @@ export default function UploadPage() {
                                 onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
                                 required
                             >
-                                <option value="" disabled>Select a category</option>
+                                <option value="" disabled>Chọn danh mục</option>
                                 {categories.map((cat) => (
                                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                                 ))}
@@ -190,11 +199,11 @@ export default function UploadPage() {
 
                         {/* Price */}
                         <div className="space-y-2">
-                            <Label htmlFor="price">Price (VND)</Label>
+                            <Label htmlFor="price">Giá bán (VNĐ)</Label>
                             <Input
                                 id="price"
                                 type="number"
-                                placeholder="0 for free"
+                                placeholder="Nhập 0 để miễn phí"
                                 value={formData.price}
                                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                             />
@@ -202,10 +211,10 @@ export default function UploadPage() {
 
                         {/* Description */}
                         <div className="space-y-2">
-                            <Label htmlFor="description">Description (Optional)</Label>
+                            <Label htmlFor="description">Mô tả chi tiết (Tùy chọn)</Label>
                             <Textarea
                                 id="description"
-                                placeholder="Describe the contents of your document..."
+                                placeholder="Mô tả nội dung tài liệu, giúp người mua dễ dàng tìm kiếm..."
                                 className="h-32"
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -220,7 +229,7 @@ export default function UploadPage() {
                         )}
 
                         <Button type="submit" className="w-full" size="lg" disabled={submitting || uploading || !uploadedFileUrl}>
-                            {submitting ? 'Publishing...' : 'Publish Document'}
+                            {submitting ? 'Đang đăng...' : 'Đăng bán tài liệu'}
                         </Button>
 
                     </form>
