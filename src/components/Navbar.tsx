@@ -23,32 +23,42 @@ export function Navbar() {
 
 
     useEffect(() => {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-            try {
-                // Simple JWT decode without external library
-                const base64Url = token.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
-                const payload = JSON.parse(jsonPayload);
+        const checkAuth = () => {
+            const token = localStorage.getItem('accessToken');
+            if (token) {
+                try {
+                    // Simple JWT decode without external library
+                    const base64Url = token.split('.')[1];
+                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                    }).join(''));
+                    const payload = JSON.parse(jsonPayload);
 
-                setUser({
-                    name: payload.fullName || payload.sub?.substring(0, 6) || 'User', // Fallback
-                    email: payload.email,
-                    role: payload.role
-                });
-            } catch (e) {
-                console.error("Invalid token", e);
+                    setUser({
+                        name: payload.fullName || payload.sub?.substring(0, 6) || 'User', // Fallback
+                        email: payload.email,
+                        role: payload.role
+                    });
+                } catch (e) {
+                    console.error("Invalid token", e);
+                    setUser(null);
+                }
+            } else {
+                setUser(null);
             }
-        }
+        };
+
+        checkAuth();
+        window.addEventListener('authChange', checkAuth);
+        return () => window.removeEventListener('authChange', checkAuth);
     }, []);
 
     const handleLogout = () => {
         localStorage.removeItem('accessToken');
         setUser(null);
-        router.push('/login');
+        window.dispatchEvent(new Event('authChange'));
+        router.push('/');
         router.refresh();
     };
 
@@ -101,6 +111,12 @@ export function Navbar() {
                                         </DropdownMenuItem>
                                     </Link>
                                 )}
+                                <Link href="/cart">
+                                    <DropdownMenuItem>
+                                        <ShoppingCart className="mr-2 h-4 w-4" />
+                                        <span>Giỏ hàng của tôi</span>
+                                    </DropdownMenuItem>
+                                </Link>
                                 <Link href="/profile">
                                     <DropdownMenuItem>
                                         <UserIcon className="mr-2 h-4 w-4" />

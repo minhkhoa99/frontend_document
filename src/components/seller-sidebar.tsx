@@ -46,7 +46,8 @@ export function SellerSidebar() {
     const handleLogout = () => {
         localStorage.removeItem('accessToken');
         setUser(null);
-        router.push('/login');
+        window.dispatchEvent(new Event('authChange'));
+        router.push('/');
         router.refresh();
     };
 

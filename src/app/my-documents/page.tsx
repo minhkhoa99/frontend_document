@@ -19,6 +19,8 @@ interface MyDocument {
     price?: { amount: number; currency: string };
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
 export default function MyDocumentsPage() {
     const [documents, setDocuments] = useState<MyDocument[]>([]);
     const [loading, setLoading] = useState(true);
@@ -36,7 +38,7 @@ export default function MyDocumentsPage() {
                 return;
             }
 
-            const res = await fetch('http://localhost:4000/orders/my-documents', {
+            const res = await fetch(`${API_URL}/orders/my-documents`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             console.log(res.status);
@@ -58,19 +60,19 @@ export default function MyDocumentsPage() {
         window.open(doc.fileUrl, '_blank');
     };
 
-    if (loading) return <div className="p-10 text-center">Loading library...</div>;
+    if (loading) return <div className="p-10 text-center">Đang tải...</div>;
 
     return (
         <div className="min-h-screen bg-gray-50 py-10">
             <div className="container mx-auto px-4 max-w-6xl">
-                <h1 className="text-3xl font-bold mb-8 text-gray-900">My Library</h1>
+                <h1 className="text-3xl font-bold mb-8 text-gray-900">Tài liệu của tôi</h1>
 
                 {documents.length === 0 ? (
                     <div className="text-center py-20 bg-white rounded-lg border border-dashed border-gray-300">
-                        <h3 className="text-xl font-medium text-gray-900 mb-2">No documents found</h3>
-                        <p className="text-gray-500 mb-6">You haven't purchased any documents yet.</p>
+                        <h3 className="text-xl font-medium text-gray-900 mb-2">Không tìm thấy tài liệu</h3>
+                        <p className="text-gray-500 mb-6">Bạn chưa mua tài liệu nào.</p>
                         <Button asChild>
-                            <Link href="/">Browse Documents</Link>
+                            <Link href="/">Khám phá tài liệu</Link>
                         </Button>
                     </div>
                 ) : (
@@ -83,7 +85,7 @@ export default function MyDocumentsPage() {
                                 <CardHeader className="p-4 pb-2">
                                     <div className="flex justify-between items-start">
                                         <div className="space-y-1">
-                                            <Badge variant="outline" className="mb-2">{doc.category?.name || 'Document'}</Badge>
+                                            <Badge variant="outline" className="mb-2">{doc.category?.name || 'Tài liệu'}</Badge>
                                             <h3 className="font-bold text-lg leading-tight line-clamp-2">
                                                 <Link href={`/documents/${doc.id}`} className="hover:underline">
                                                     {doc.title}
@@ -95,12 +97,12 @@ export default function MyDocumentsPage() {
                                 <CardContent className="p-4 pt-0 flex-grow">
                                     <div className="text-sm text-gray-500 flex items-center mt-2">
                                         <Calendar className="h-4 w-4 mr-1" />
-                                        Purchased: {new Date(doc.purchaseDate).toLocaleDateString()}
+                                        Ngày mua: {new Date(doc.purchaseDate).toLocaleDateString('vi-VN')}
                                     </div>
                                 </CardContent>
                                 <CardFooter className="p-4 pt-0">
                                     <Button className="w-full" onClick={() => handleDownload(doc)}>
-                                        <Download className="mr-2 h-4 w-4" /> Download
+                                        <Download className="mr-2 h-4 w-4" /> Tải về
                                     </Button>
                                 </CardFooter>
                             </Card>
