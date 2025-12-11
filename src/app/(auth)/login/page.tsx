@@ -52,7 +52,7 @@ export default function LoginPage() {
             const res = await fetch(`${API_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(values),
+                body: JSON.stringify({ ...values, portal: 'user' }),
             });
 
             if (!res.ok) {
@@ -64,6 +64,12 @@ export default function LoginPage() {
             localStorage.setItem('accessToken', data.access_token);
 
             // Redirect based on role
+            if (data.user?.role === 'admin') {
+                // Logout immediately just in case token was saved
+                localStorage.removeItem('accessToken');
+                throw new Error('Tài khoản Admin vui lòng truy cập trang Quản trị riêng.');
+            }
+
             if (data.user?.role === 'vendor') {
                 router.push('/seller/dashboard');
             } else {
