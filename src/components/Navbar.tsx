@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, LogOut, LayoutDashboard, User as UserIcon } from 'lucide-react';
+import { ShoppingCart, LogOut, LayoutDashboard, User as UserIcon, FileText } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
     DropdownMenu,
@@ -115,6 +115,12 @@ export function Navbar() {
                                     <DropdownMenuItem>
                                         <ShoppingCart className="mr-2 h-4 w-4" />
                                         <span>Giỏ hàng của tôi</span>
+                                    </DropdownMenuItem>
+                                </Link>
+                                <Link href="/my-documents">
+                                    <DropdownMenuItem>
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        <span>Tài liệu của tôi</span>
                                     </DropdownMenuItem>
                                 </Link>
                                 <Link href="/profile">

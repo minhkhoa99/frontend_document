@@ -24,6 +24,7 @@ interface Document {
   author: { fullName: string } | null;
   category: { name: string } | null;
   fileUrl: string;
+  avatar?: string;
   createdAt: string;
 }
 
@@ -100,19 +101,28 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {featuredDocs.length > 0 ? featuredDocs.map((doc) => (
-                <Card key={doc.id} className="overflow-hidden hover:shadow-lg transition-shadow border-gray-200">
-                  <div className="aspect-[4/5] bg-gray-100 relative group">
-                    {/* Placeholder for preview image */}
-                    <div className="flex h-full items-center justify-center text-gray-400">
-                      <div className="text-center">
-                        <div className="text-4xl font-bold mb-2">PDF</div>
-                        <div className="text-xs">Xem trước</div>
+                <Card key={doc.id} className="overflow-hidden hover:shadow-lg transition-shadow border-gray-200 flex flex-col h-full">
+                  <div className="aspect-[3/4] bg-gray-100 relative group overflow-hidden">
+                    {doc.avatar ? (
+                      <img
+                        src={doc.avatar}
+                        alt={doc.title}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-gray-400 bg-gray-50">
+                        <div className="text-center p-4">
+                          <div className="text-4xl font-bold mb-2 opacity-20">PDF</div>
+                          <div className="text-xs uppercase tracking-wider">Xem trước</div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button size="sm" className="w-full" variant="secondary">Xem chi tiết</Button>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                      <div className="flex gap-2">
+                        <Button size="sm" className="w-full bg-white text-black hover:bg-gray-100" variant="secondary">Xem</Button>
+                      </div>
                     </div>
                   </div>
                   <CardContent className="p-4">

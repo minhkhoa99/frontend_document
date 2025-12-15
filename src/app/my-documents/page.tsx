@@ -55,9 +55,37 @@ export default function MyDocumentsPage() {
         }
     };
 
-    const handleDownload = (doc: MyDocument) => {
-        // In a real app, this would be a secure download endpoint
-        window.open(doc.fileUrl, '_blank');
+    const handleDownload = async (doc: MyDocument) => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                router.push('/login');
+                return;
+            }
+
+            const res = await fetch(`${API_URL}/documents/${doc.id}/download`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                if (data.url) {
+                    window.open(data.url, '_blank');
+                } else {
+                    alert('Lỗi: Không tìm thấy link tải.');
+                }
+            } else {
+                if (res.status === 403) {
+                    alert('Bạn chưa có quyền tải tài liệu này (Vui lòng mua trước).');
+                } else {
+                    alert('Có lỗi xảy ra khi tải tài liệu.');
+                }
+                console.error('Download failed', res.status);
+            }
+        } catch (error) {
+            console.error('Download error', error);
+            alert('Có lỗi xảy ra khi kết nối đến server.');
+        }
     };
 
     if (loading) return <div className="p-10 text-center">Đang tải...</div>;

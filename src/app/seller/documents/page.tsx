@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Edit, Trash, Plus } from 'lucide-react';
+import { FileText, Edit, Trash, Plus, Eye, EyeOff } from 'lucide-react';
 
 interface Document {
     id: string;
@@ -14,6 +14,7 @@ interface Document {
     status: string;
     price: { amount: number } | null;
     createdAt: string;
+    isActive: boolean;
 }
 
 export default function SellerDocumentsPage() {
@@ -37,6 +38,56 @@ export default function SellerDocumentsPage() {
                 setLoading(false);
             });
     }, []);
+
+    const handleToggleActive = async (doc: Document) => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+            const newStatus = !doc.isActive;
+
+            const res = await fetch(`${apiUrl}/seller/documents/${doc.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ isActive: newStatus })
+            });
+
+            if (res.ok) {
+                setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, isActive: newStatus } : d));
+            } else {
+                alert('Lỗi khi cập nhật trạng thái.');
+            }
+        } catch (error) {
+            console.error('Toggle error', error);
+            alert('Có lỗi xảy ra.');
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Bạn có chắc chắn muốn xóa tài liệu này không?')) return;
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+            const res = await fetch(`${apiUrl}/seller/documents/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                setDocuments(prev => prev.filter(doc => doc.id !== id));
+                alert('Đã xóa tài liệu thành công.');
+            } else {
+                alert('Lỗi khi xóa tài liệu.');
+            }
+        } catch (error) {
+            console.error('Delete error', error);
+            alert('Có lỗi xảy ra.');
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -88,15 +139,32 @@ export default function SellerDocumentsPage() {
                                     </div>
 
                                     <div className="flex items-center gap-4">
-                                        <Badge variant={doc.status === 'approved' ? 'default' : 'secondary'}>
-                                            {doc.status === 'approved' ? 'Đã duyệt' :
-                                                doc.status === 'pending' ? 'Chờ duyệt' : doc.status}
-                                        </Badge>
+                                        <div className="flex flex-col items-end gap-1">
+                                            <Badge variant={doc.status === 'approved' ? 'default' : 'secondary'}>
+                                                {doc.status === 'approved' ? 'Đã duyệt' :
+                                                    doc.status === 'pending' ? 'Chờ duyệt' : doc.status}
+                                            </Badge>
+                                            {!doc.isActive && (
+                                                <Badge variant="outline" className="text-gray-500 border-gray-400">
+                                                    Đã ẩn
+                                                </Badge>
+                                            )}
+                                        </div>
                                         <div className="flex items-center gap-2">
-                                            <Button variant="ghost" size="icon">
-                                                <Edit className="h-4 w-4 text-gray-500" />
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleToggleActive(doc)}
+                                                title={doc.isActive ? "Ẩn tài liệu" : "Hiện tài liệu"}
+                                            >
+                                                {doc.isActive ? <Eye className="h-4 w-4 text-gray-500" /> : <EyeOff className="h-4 w-4 text-gray-400" />}
                                             </Button>
-                                            <Button variant="ghost" size="icon">
+                                            <Link href={`/seller/documents/${doc.id}/edit`}>
+                                                <Button variant="ghost" size="icon">
+                                                    <Edit className="h-4 w-4 text-gray-500" />
+                                                </Button>
+                                            </Link>
+                                            <Button variant="ghost" size="icon" onClick={() => handleDelete(doc.id)}>
                                                 <Trash className="h-4 w-4 text-red-500" />
                                             </Button>
                                         </div>

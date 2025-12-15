@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { UploadCloud, File, X, CheckCircle, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { AlertCircle, ArrowLeft, UploadCloud, File, X, Image as ImageIcon } from 'lucide-react';
+import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -16,20 +17,26 @@ interface Category {
     name: string;
 }
 
-export default function UploadPage() {
+export default function EditDocumentPage() {
     const router = useRouter();
+    const params = useParams(); // Should contain id
+    const docId = params?.id as string;
+
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
     // PDF File State
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
-    const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
+    const [newFileUrl, setNewFileUrl] = useState<string | null>(null);
 
-    // Preview Image State
-    const [previewImage, setPreviewImage] = useState<File | null>(null);
-    const [uploadingPreview, setUploadingPreview] = useState(false);
-    const [uploadedAvatarUrl, setUploadedAvatarUrl] = useState<string | null>(null);
+    // Avatar Image State
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
+    const [newAvatarUrl, setNewAvatarUrl] = useState<string | null>(null);
+    const [currentAvatar, setCurrentAvatar] = useState<string | null>(null);
 
-    const [submitting, setSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [categories, setCategories] = useState<Category[]>([]);
 
     const [formData, setFormData] = useState({
@@ -47,12 +54,42 @@ export default function UploadPage() {
             .catch((err) => console.error('Failed to fetch categories', err));
     }, []);
 
-    const handleFileUpload = async (fileToUpload: File, isPreview: boolean = false) => {
+    useEffect(() => {
+        if (!docId) return;
+        fetchDocument();
+    }, [docId]);
+
+    const fetchDocument = async () => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch(`${API_URL}/documents/${docId}`); // Public read for simplicity
+
+            if (res.ok) {
+                const doc = await res.json();
+                setFormData({
+                    title: doc.title,
+                    description: doc.description || '',
+                    price: doc.price ? doc.price.amount.toString() : '0',
+                    categoryId: doc.category ? doc.category.id : '',
+                });
+                setCurrentAvatar(doc.avatar || null);
+            } else {
+                setError('Không tìm thấy tài liệu');
+            }
+        } catch (err) {
+            console.error(err);
+            setError('Lỗi kết nối');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleFileUpload = async (fileToUpload: File, isAvatar: boolean = false) => {
         if (!fileToUpload) return;
 
-        if (isPreview) {
-            setPreviewImage(fileToUpload);
-            setUploadingPreview(true);
+        if (isAvatar) {
+            setAvatarFile(fileToUpload);
+            setUploadingAvatar(true);
         } else {
             setFile(fileToUpload);
             setUploading(true);
@@ -63,34 +100,33 @@ export default function UploadPage() {
         formData.append('file', fileToUpload);
 
         try {
+            const token = localStorage.getItem('accessToken');
             const res = await fetch(`${API_URL}/documents/upload`, {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                    'Authorization': `Bearer ${token}`
                 }
             });
 
-            if (!res.ok) throw new Error(`${isPreview ? 'Image' : 'File'} upload failed`);
+            if (!res.ok) throw new Error(`${isAvatar ? 'Image' : 'File'} upload failed`);
 
             const data = await res.json();
-
-            if (isPreview) {
-                setUploadedAvatarUrl(data.url);
+            if (isAvatar) {
+                setNewAvatarUrl(data.url);
             } else {
-                setUploadedFileUrl(data.url);
+                setNewFileUrl(data.url);
             }
-
         } catch (err: any) {
             setError(err.message || 'Upload failed');
-            if (isPreview) {
-                setPreviewImage(null);
+            if (isAvatar) {
+                setAvatarFile(null);
             } else {
                 setFile(null);
             }
         } finally {
-            if (isPreview) {
-                setUploadingPreview(false);
+            if (isAvatar) {
+                setUploadingAvatar(false);
             } else {
                 setUploading(false);
             }
@@ -103,7 +139,7 @@ export default function UploadPage() {
         }
     };
 
-    const handlePreviewImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             handleFileUpload(e.target.files[0], true);
         }
@@ -111,37 +147,41 @@ export default function UploadPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!uploadedFileUrl) {
-            setError('Please upload a PDF file first');
-            return;
-        }
-
         setSubmitting(true);
         setError(null);
 
         try {
             const token = localStorage.getItem('accessToken');
-            const res = await fetch(`${API_URL}/documents`, {
-                method: 'POST',
+
+            const payload: any = {
+                title: formData.title,
+                description: formData.description,
+                price: parseFloat(formData.price) || 0,
+                categoryId: formData.categoryId,
+            };
+
+            if (newFileUrl) {
+                payload.fileUrl = newFileUrl;
+            }
+            if (newAvatarUrl) {
+                payload.avatar = newAvatarUrl;
+            }
+
+            const res = await fetch(`${API_URL}/seller/documents/${docId}`, {
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({
-                    title: formData.title,
-                    description: formData.description,
-                    price: parseFloat(formData.price) || 0,
-                    categoryId: formData.categoryId,
-                    fileUrl: uploadedFileUrl,
-                    avatar: uploadedAvatarUrl, // Send as avatar
-                }),
+                body: JSON.stringify(payload),
             });
 
             if (!res.ok) {
-                throw new Error('Failed to create document');
+                if (res.status === 403) throw new Error('Bạn không có quyền sửa tài liệu này');
+                throw new Error('Lỗi khi cập nhật tài liệu');
             }
 
-            alert('Đăng bán tài liệu thành công!');
+            alert('Cập nhật tài liệu thành công!');
             router.push('/seller/documents');
         } catch (err: any) {
             setError(err.message);
@@ -150,27 +190,39 @@ export default function UploadPage() {
         }
     };
 
+    if (loading) return <div className="p-10 text-center">Đang tải...</div>;
+    if (!docId) return <div className="p-10 text-center">Không tìm thấy ID tài liệu</div>;
+
     return (
         <div className="min-h-screen bg-gray-50/50 py-12 px-4 sm:px-6 lg:px-8 flex justify-center">
             <Card className="w-full max-w-2xl shadow-lg border-0 bg-white">
                 <CardHeader>
-                    <CardTitle className="text-2xl font-bold text-gray-900">Tải lên tài liệu</CardTitle>
-                    <CardDescription>Chia sẻ kiến thức và kiếm thêm thu nhập một cách dễ dàng.</CardDescription>
+                    <div className="flex items-center mb-4">
+                        <Link href="/seller/documents" className="text-gray-500 hover:text-primary transition-colors">
+                            <ArrowLeft className="h-5 w-5 mr-2 inline" /> Quay lại
+                        </Link>
+                    </div>
+                    <CardTitle className="text-2xl font-bold text-gray-900">Chỉnh sửa tài liệu</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
 
-                        {/* File Upload Area */}
+                        {/* File Upload Update */}
                         <div className="space-y-2">
-                            <Label>Tệp tài liệu (PDF) <span className="text-red-500">*</span></Label>
+                            <Label>Cập nhật tệp tài liệu (PDF) - <span className="text-gray-500 font-normal">Để trống nếu không thay đổi</span></Label>
                             <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${file ? 'border-green-500 bg-green-50/30' : 'border-gray-300 hover:border-primary/50'}`}>
                                 {!file ? (
                                     <label className="cursor-pointer block w-full h-full">
                                         <UploadCloud className="mx-auto h-10 w-10 text-gray-400" />
                                         <span className="mt-2 block text-sm font-medium text-gray-900">
-                                            Nhấn để tìm PDF
+                                            Chọn tệp mới để thay thế
                                         </span>
-                                        <input type="file" className="hidden" accept=".pdf" onChange={handleFileChange} />
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            accept=".pdf"
+                                            onChange={handleFileChange}
+                                        />
                                     </label>
                                 ) : (
                                     <div className="flex items-center justify-between">
@@ -178,13 +230,15 @@ export default function UploadPage() {
                                             <div className="bg-primary/10 p-2 rounded-full">
                                                 <File className="h-6 w-6 text-primary" />
                                             </div>
-                                            <div className="text-left overflow-hidden max-w-[200px]">
-                                                <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-                                                <p className="text-xs text-gray-500">{uploading ? 'Đang tải...' : 'Đã tải lên'}</p>
+                                            <div className="text-left">
+                                                <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                                                <p className="text-xs text-gray-500">New file</p>
                                             </div>
                                         </div>
-                                        {!uploading && (
-                                            <Button variant="ghost" size="sm" type="button" onClick={() => { setFile(null); setUploadedFileUrl(null); }}>
+                                        {uploading ? (
+                                            <span className="text-sm font-bold text-primary animate-pulse">Đang tải lên...</span>
+                                        ) : (
+                                            <Button variant="ghost" size="sm" onClick={() => { setFile(null); setNewFileUrl(null); }} type="button">
                                                 <X className="h-4 w-4" />
                                             </Button>
                                         )}
@@ -193,34 +247,41 @@ export default function UploadPage() {
                             </div>
                         </div>
 
-                        {/* Avatar Image Upload Area */}
+                        {/* Avatar Upload Update */}
                         <div className="space-y-2">
-                            <Label>Ảnh bìa (Tùy chọn)</Label>
-                            <div className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${previewImage ? 'border-blue-500 bg-blue-50/30' : 'border-gray-300 hover:border-blue-400/50'}`}>
-                                {!previewImage ? (
+                            <Label>Cập nhật ảnh bìa - <span className="text-gray-500 font-normal">Để trống nếu không thay đổi</span></Label>
+                            <div className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${avatarFile ? 'border-blue-500 bg-blue-50/30' : 'border-gray-300 hover:border-blue-400/50'}`}>
+                                {!avatarFile ? (
                                     <label className="cursor-pointer block w-full h-full flex flex-col items-center justify-center">
-                                        <ImageIcon className="h-8 w-8 text-gray-400 mb-2" />
-                                        <span className="text-sm text-gray-600">Thêm ảnh bìa (JPG, PNG)</span>
-                                        <input type="file" className="hidden" accept="image/*" onChange={handlePreviewImageChange} />
+                                        {currentAvatar ? (
+                                            <div className="mb-2">
+                                                <img src={currentAvatar} alt="Current" className="h-20 object-cover rounded shadow-sm mx-auto" />
+                                                <span className="text-xs text-blue-600 block mt-1">Ảnh hiện tại</span>
+                                            </div>
+                                        ) : (
+                                            <ImageIcon className="h-8 w-8 text-gray-400 mb-2" />
+                                        )}
+                                        <span className="text-sm text-gray-600">Chọn ảnh mới (JPG, PNG)</span>
+                                        <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
                                     </label>
                                 ) : (
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center space-x-3">
-                                            {/* If uploadedAvatarUrl exists, show image preview, else show icon */}
-                                            {uploadedAvatarUrl ? (
-                                                <img src={uploadedAvatarUrl} alt="Preview" className="h-12 w-12 object-cover rounded" />
+                                            {/* Show preview of NEW file if we could (need FileReader), for now just show icon or name */}
+                                            {newAvatarUrl ? (
+                                                <img src={newAvatarUrl} alt="Preview" className="h-12 w-12 object-cover rounded" />
                                             ) : (
                                                 <div className="bg-blue-100 p-2 rounded-full">
                                                     <ImageIcon className="h-6 w-6 text-blue-600" />
                                                 </div>
                                             )}
-                                            <div className="text-left overflow-hidden max-w-[200px]">
-                                                <p className="text-sm font-medium text-gray-900 truncate">{previewImage.name}</p>
-                                                <p className="text-xs text-gray-500">{uploadingPreview ? 'Đang tải...' : 'Đã tải lên'}</p>
+                                            <div className="text-left overflow-hidden">
+                                                <p className="text-sm font-medium text-gray-900 truncate max-w-[150px]">{avatarFile.name}</p>
+                                                <p className="text-xs text-gray-500">{uploadingAvatar ? 'Đang tải...' : 'New Image'}</p>
                                             </div>
                                         </div>
-                                        {!uploadingPreview && (
-                                            <Button variant="ghost" size="sm" type="button" onClick={() => { setPreviewImage(null); setUploadedAvatarUrl(null); }}>
+                                        {!uploadingAvatar && (
+                                            <Button variant="ghost" size="sm" type="button" onClick={() => { setAvatarFile(null); setNewAvatarUrl(null); }}>
                                                 <X className="h-4 w-4" />
                                             </Button>
                                         )}
@@ -231,31 +292,18 @@ export default function UploadPage() {
 
                         {/* Title */}
                         <div className="space-y-2">
-                            <Label htmlFor="title">Tiêu đề tài liệu <span className="text-red-500">*</span></Label>
+                            <Label htmlFor="title">Tiêu đề tài liệu</Label>
                             <Input
                                 id="title"
-                                placeholder="VD: Giáo án Toán 12 Học kì 1 - Cánh Diều"
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                 required
                             />
                         </div>
 
-
-
-                        {/* Submitting Overlay */}
-                        {submitting && (
-                            <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-10 rounded-lg backdrop-blur-sm">
-                                <div className="text-center">
-                                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-2"></div>
-                                    <p className="text-sm font-medium text-gray-700">Đang đăng bán...</p>
-                                </div>
-                            </div>
-                        )}
-
                         {/* Category */}
                         <div className="space-y-2">
-                            <Label htmlFor="category">Danh mục <span className="text-red-500">*</span></Label>
+                            <Label htmlFor="category">Danh mục</Label>
                             <select
                                 id="category"
                                 className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -284,10 +332,9 @@ export default function UploadPage() {
 
                         {/* Description */}
                         <div className="space-y-2">
-                            <Label htmlFor="description">Mô tả chi tiết (Tùy chọn)</Label>
+                            <Label htmlFor="description">Mô tả chi tiết</Label>
                             <Textarea
                                 id="description"
-                                placeholder="Mô tả nội dung tài liệu, giúp người mua dễ dàng tìm kiếm..."
                                 className="h-32"
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -301,10 +348,9 @@ export default function UploadPage() {
                             </div>
                         )}
 
-                        <Button type="submit" className="w-full" size="lg" disabled={submitting || uploading || uploadingPreview || !uploadedFileUrl}>
-                            {submitting ? 'Đang đăng...' : 'Đăng bán tài liệu'}
+                        <Button type="submit" className="w-full" size="lg" disabled={submitting || uploading || uploadingAvatar}>
+                            {submitting ? 'Đang lưu...' : 'Lưu thay đổi'}
                         </Button>
-
                     </form>
                 </CardContent>
             </Card>
