@@ -106,7 +106,7 @@ export default function UploadPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!uploadedFileUrl) {
-            setError('Please upload a PDF file first');
+            setError('Vui lòng tải lên tài liệu trước.');
             return;
         }
 
@@ -148,15 +148,15 @@ export default function UploadPage() {
 
                         {/* File Upload Area */}
                         <div className="space-y-2">
-                            <Label>Tệp tài liệu (PDF) <span className="text-red-500">*</span></Label>
+                            <Label>Tệp tài liệu (PDF, Word, Excel, PowerPoint) <span className="text-red-500">*</span></Label>
                             <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${file ? 'border-green-500 bg-green-50/30' : 'border-gray-300 hover:border-primary/50'}`}>
                                 {!file ? (
                                     <label className="cursor-pointer block w-full h-full">
                                         <UploadCloud className="mx-auto h-10 w-10 text-gray-400" />
                                         <span className="mt-2 block text-sm font-medium text-gray-900">
-                                            Nhấn để tìm PDF
+                                            Nhấn để tìm tài liệu
                                         </span>
-                                        <input type="file" className="hidden" accept=".pdf" onChange={handleFileChange} />
+                                        <input type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" onChange={handleFileChange} />
                                     </label>
                                 ) : (
                                     <div className="flex items-center justify-between">
