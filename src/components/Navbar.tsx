@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+import Cookies from 'js-cookie';
+
 export function Navbar() {
     const pathname = usePathname();
     const router = useRouter();
@@ -46,11 +48,17 @@ export function Navbar() {
     }, []);
 
     const handleLogout = async () => {
+        const refreshToken = Cookies.get('refreshToken');
         try {
-            await apiFetch('/auth/logout', { method: 'POST' });
+            await apiFetch('/auth/logout', {
+                method: 'POST',
+                body: JSON.stringify({ refresh_token: refreshToken })
+            });
         } catch (e) {
             console.error(e);
         }
+        Cookies.remove('accessToken');
+        Cookies.remove('refreshToken');
         setUser(null);
         window.dispatchEvent(new Event('authChange'));
         router.push('/');
