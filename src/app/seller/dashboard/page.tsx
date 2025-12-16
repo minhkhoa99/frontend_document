@@ -57,6 +57,23 @@ export default function SellerDashboard() {
         fetchData();
     }, [router]);
 
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Bạn có chắc chắn muốn xóa tài liệu này không?')) {
+            return;
+        }
+
+        try {
+            await apiFetch(`/seller/documents/${id}`, { method: 'DELETE' });
+            // Update local state to remove the deleted item
+            setDocuments(prev => prev.filter(doc => doc.id !== id));
+            // Update stats if needed (optional, simplistic update)
+            setStats(prev => ({ ...prev }));
+        } catch (err: any) {
+            console.error(err);
+            alert('Xóa tài liệu thất bại: ' + (err.message || 'Lỗi không xác định'));
+        }
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -160,10 +177,17 @@ export default function SellerDashboard() {
                                                 doc.status === 'pending' ? 'Chờ duyệt' : doc.status}
                                         </Badge>
                                         <div className="flex items-center gap-1">
-                                            <Button variant="ghost" size="icon" title="Chỉnh sửa">
-                                                <Edit className="h-4 w-4 text-gray-500" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon" title="Xóa">
+                                            <Link href={`/seller/documents/${doc.id}/edit`}>
+                                                <Button variant="ghost" size="icon" title="Chỉnh sửa">
+                                                    <Edit className="h-4 w-4 text-gray-500" />
+                                                </Button>
+                                            </Link>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                title="Xóa"
+                                                onClick={() => handleDelete(doc.id)}
+                                            >
                                                 <Trash className="h-4 w-4 text-red-500" />
                                             </Button>
                                         </div>
