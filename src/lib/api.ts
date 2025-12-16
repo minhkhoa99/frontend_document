@@ -21,9 +21,12 @@ export async function apiFetch<T = any>(endpoint: string, options: RequestInit =
     const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
 
     const headers: HeadersInit = {
-        'Content-Type': 'application/json',
         ...options.headers,
     };
+
+    if (!(options.body instanceof FormData)) {
+        (headers as any)['Content-Type'] = 'application/json';
+    }
 
     // Client-side Cookie header injection
     const token = Cookies.get('accessToken');
