@@ -13,6 +13,7 @@ import {
     LogOut,
     Home
 } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -22,33 +23,30 @@ export function SellerSidebar() {
     const [user, setUser] = useState<{ name: string; email: string; role: string } | null>(null);
 
     useEffect(() => {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-            try {
-                const base64Url = token.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
-                const payload = JSON.parse(jsonPayload);
-
-                setUser({
-                    name: payload.fullName || payload.sub?.substring(0, 6) || 'User',
-                    email: payload.email,
-                    role: payload.role
-                });
-            } catch (e) {
-                console.error("Invalid token", e);
-            }
-        }
+        // Fetch user profile from backend since we can't read HttpOnly cookie
+        apiFetch<any>('/auth/profile')
+            .then(data => {
+                if (data) {
+                    setUser({
+                        name: data.fullName || 'User',
+                        email: data.email,
+                        role: data.role
+                    });
+                }
+            })
+            .catch(err => console.error("Failed to fetch profile", err));
     }, []);
 
-    const handleLogout = () => {
-        localStorage.removeItem('accessToken');
+    const handleLogout = async () => {
+        try {
+            await apiFetch('/auth/logout', { method: 'POST' });
+        } catch (e) {
+            console.error(e);
+        }
         setUser(null);
         window.dispatchEvent(new Event('authChange'));
         router.push('/');
-        router.refresh();
+        // router.refresh(); // Removed refresh
     };
 
     const menuItems = [

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { SidebarMenu } from '@/components/sidebar-menu';
+import { apiFetch } from '@/lib/api'; // Import apiFetch
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -42,16 +43,20 @@ export default function CategoryPage() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+                // 1. Fetch Documents using apiFetch (auto-unwraps 'data')
+                // Note: apiFetch throws if not success.
+                // Depending on backend, documents endpoint might return { items: [], ... } or just [].
+                // Assuming it returns []. If it returns paginated object, we need to adjust.
+                const allDocs: any = await apiFetch('/documents');
 
-                // 1. Fetch Documents
-                // In a real app, you'd use: GET /documents?categorySlug=${slug}
-                // For this prototype, we fetch all and filter client-side to match the user's "Display documents by category" request immediately.
-                const docsRes = await fetch(`${apiUrl}/documents`);
-                const allDocs = await docsRes.json();
+                // Validate allDocs is array before filtering
+                if (!Array.isArray(allDocs)) {
+                    console.error("Expected array of documents but got:", allDocs);
+                    setDocuments([]);
+                    return;
+                }
 
                 // Mock Filter Logic: Match slug in category name or slug property
-                // Logic: If doc.category.slug === slug OR doc.category.name (normalized) === slug
                 const filteredDocs = allDocs.filter((d: any) => {
                     // Normalize slug for comparison if needed
                     const catSlug = d.category?.slug || '';
@@ -62,9 +67,7 @@ export default function CategoryPage() {
 
                 // 2. Fetch Category Info to get Children
                 // Since we don't have a direct "get by slug" endpoint that returns children, we'll fetch the tree and traverse it.
-                // This is a temporary solution until the backend provides a more specific endpoint.
-                const categoriesRes = await fetch(`${apiUrl}/categories/tree`);
-                const categoriesTree = await categoriesRes.json();
+                const categoriesTree: any = await apiFetch('/categories/tree');
 
                 const findCategoryBySlug = (items: Category[], targetSlug: string): Category | null => {
                     for (const item of items) {

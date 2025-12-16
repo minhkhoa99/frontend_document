@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+import { apiFetch } from "@/lib/api"
+// const API_URL = ... (managed by apiFetch)
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -19,24 +20,13 @@ export default function ProfilePage() {
 
     useEffect(() => {
         const fetchProfile = async () => {
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                router.push('/login');
-                return;
-            }
-
             try {
-                const res = await fetch(`${API_URL}/users/profile`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                if (!res.ok) throw new Error('Failed to fetch profile');
-                const data = await res.json();
+                const data = await apiFetch<any>('/users/profile');
                 setUser(data);
-                setFormData({ fullName: data.fullName, bio: '' }); // Bio not in DB yet
+                setFormData({ fullName: data.fullName, bio: '' });
             } catch (error) {
                 console.error(error);
+                // apiFetch handles redirect on 401 if not suppressed
             } finally {
                 setLoading(false);
             }
@@ -48,17 +38,15 @@ export default function ProfilePage() {
     const handleUpdateProfile = async () => {
         setSaving(true);
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch(`${API_URL}/users/profile`, {
+            await apiFetch('/users/profile', {
                 method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify({ fullName: formData.fullName }),
             });
 
-            if (!res.ok) throw new Error('Failed to update');
+            alert('Cập nhật thành công!');
+
+            // Removed manual check as apiFetch throws
+
 
             alert('Cập nhật thành công!');
             // Update local storage token if name changed? 

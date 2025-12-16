@@ -22,7 +22,10 @@ import { useState } from "react"
 import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+import { apiFetch } from '@/lib/api';
+
+// const API_URL = ...
 
 const formSchema = z.object({
     name: z.string().min(2, {
@@ -56,16 +59,12 @@ export default function RegisterPage() {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch(`${API_URL}/auth/register`, {
+
+            await apiFetch('/auth/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                // Content-Type handled by apiFetch
                 body: JSON.stringify({ ...values, fullName: values.name }),
             });
-
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.message || 'Đăng ký thất bại');
-            }
 
             alert('Đăng ký thành công! Vui lòng đăng nhập.');
             router.push('/login');

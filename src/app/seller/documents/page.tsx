@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FileText, Edit, Trash, Plus, Eye, EyeOff } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 interface Document {
     id: string;
@@ -22,15 +23,15 @@ export default function SellerDocumentsPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('accessToken');
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-
-        fetch(`${apiUrl}/seller/documents`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-            .then(res => res.json())
+        apiFetch<Document[]>('/seller/documents')
             .then(data => {
-                setDocuments(data);
+                // Ensure data is array; apiFetch unwraps {success: true, data: [...]} to [...]
+                // If error (401), apiFetch redirects.
+                if (Array.isArray(data)) {
+                    setDocuments(data);
+                } else {
+                    setDocuments([]);
+                }
                 setLoading(false);
             })
             .catch(err => {
@@ -41,24 +42,14 @@ export default function SellerDocumentsPage() {
 
     const handleToggleActive = async (doc: Document) => {
         try {
-            const token = localStorage.getItem('accessToken');
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
             const newStatus = !doc.isActive;
-
-            const res = await fetch(`${apiUrl}/seller/documents/${doc.id}`, {
+            await apiFetch(`/seller/documents/${doc.id}`, {
                 method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify({ isActive: newStatus })
             });
 
-            if (res.ok) {
-                setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, isActive: newStatus } : d));
-            } else {
-                alert('Lỗi khi cập nhật trạng thái.');
-            }
+            // If success (no throw)
+            setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, isActive: newStatus } : d));
         } catch (error) {
             console.error('Toggle error', error);
             alert('Có lỗi xảy ra.');
@@ -69,20 +60,12 @@ export default function SellerDocumentsPage() {
         if (!confirm('Bạn có chắc chắn muốn xóa tài liệu này không?')) return;
 
         try {
-            const token = localStorage.getItem('accessToken');
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-
-            const res = await fetch(`${apiUrl}/seller/documents/${id}`, {
+            await apiFetch(`/seller/documents/${id}`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
             });
-
-            if (res.ok) {
-                setDocuments(prev => prev.filter(doc => doc.id !== id));
-                alert('Đã xóa tài liệu thành công.');
-            } else {
-                alert('Lỗi khi xóa tài liệu.');
-            }
+            // If success
+            setDocuments(prev => prev.filter(doc => doc.id !== id));
+            alert('Đã xóa tài liệu thành công.');
         } catch (error) {
             console.error('Delete error', error);
             alert('Có lỗi xảy ra.');

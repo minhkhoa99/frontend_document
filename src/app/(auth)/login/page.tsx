@@ -20,8 +20,10 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { apiFetch } from '@/lib/api';
+import Cookies from 'js-cookie';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+// const API_URL = ... handled by apiFetch
 
 const formSchema = z.object({
     email: z.string().email({
@@ -49,34 +51,37 @@ export default function LoginPage() {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch(`${API_URL}/auth/login`, {
+            const data = await apiFetch<{ access_token: string, refresh_token: string, user: any }>('/auth/login', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...values, portal: 'user' }),
+                body: JSON.stringify({ ...values, portal: 'user' }), // headers handled
             });
 
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.message || 'Đăng nhập thất bại');
+            Cookies.set('accessToken', data.access_token, { expires: 1 }); // 1 day
+            if (data.refresh_token) {
+                Cookies.set('refreshToken', data.refresh_token, { expires: 30 }); // 30 days
             }
 
-            const data = await res.json();
-            localStorage.setItem('accessToken', data.access_token);
+            console.log('Login successful, data:', data);
 
             // Redirect based on role
+            console.log('Login successful, data:', data);
+
             if (data.user?.role === 'admin') {
-                // Logout immediately just in case token was saved
-                localStorage.removeItem('accessToken');
+                await apiFetch('/auth/logout', { method: 'POST' });
                 throw new Error('Tài khoản Admin vui lòng truy cập trang Quản trị riêng.');
             }
 
-            if (data.user?.role === 'vendor') {
+            // Dispatch event to update UI states (e.g. standardizing auth)
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('authChange'));
+            }
+
+            // Redirect based on role
+            if (data.user && data.user.role === 'vendor') {
                 router.push('/seller/dashboard');
             } else {
                 router.push('/');
             }
-            window.dispatchEvent(new Event('authChange'));
-            router.refresh();
         } catch (err: any) {
             setError(err.message);
         } finally {

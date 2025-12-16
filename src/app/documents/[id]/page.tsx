@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Eye, Download, ShoppingCart, Share2, Flag, FileText, Calendar, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/api';
 
 interface Document {
     id: string;
@@ -29,8 +30,7 @@ export default function DocumentDetailPage() {
 
     useEffect(() => {
         if (id) {
-            fetch(`http://localhost:4000/documents/${id}`)
-                .then((res) => res.json())
+            apiFetch<Document>(`/documents/${id}`)
                 .then((data) => {
                     setDocument(data);
                     setLoading(false);
@@ -43,30 +43,19 @@ export default function DocumentDetailPage() {
     }, [id]);
 
     const addToCart = async () => {
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-            router.push('/login');
-            return;
-        }
+        // Auth check handled by apiFetch (will redirect to login if 401)
 
         if (!document) return;
 
         try {
-            const res = await fetch('http://localhost:4000/cart', {
+            await apiFetch('/cart', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
                 body: JSON.stringify({ documentId: document.id }),
             });
 
-            if (res.ok) {
-                alert('Added to cart!');
-            } else {
-                alert('Failed to add to cart (maybe already added?)');
-            }
+            alert('Added to cart!');
         } catch (err) {
+            alert('Failed to add to cart (maybe already added?)');
             console.error(err);
         }
     };

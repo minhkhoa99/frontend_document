@@ -8,8 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { UploadCloud, File, X, CheckCircle, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+// const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'; // Handled by apiFetch
 
 interface Category {
     id: string;
@@ -41,8 +42,7 @@ export default function UploadPage() {
 
     useEffect(() => {
         // Fetch categories
-        fetch(`${API_URL}/categories`)
-            .then((res) => res.json())
+        apiFetch<Category[]>('/categories')
             .then((data) => setCategories(data))
             .catch((err) => console.error('Failed to fetch categories', err));
     }, []);
@@ -63,17 +63,11 @@ export default function UploadPage() {
         formData.append('file', fileToUpload);
 
         try {
-            const res = await fetch(`${API_URL}/documents/upload`, {
+            const data = await apiFetch<{ url: string }>('/documents/upload', {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                }
+                // apiFetch handles Authorization if key is 'accessToken'
             });
-
-            if (!res.ok) throw new Error(`${isPreview ? 'Image' : 'File'} upload failed`);
-
-            const data = await res.json();
 
             if (isPreview) {
                 setUploadedAvatarUrl(data.url);
@@ -120,13 +114,8 @@ export default function UploadPage() {
         setError(null);
 
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch(`${API_URL}/documents`, {
+            await apiFetch('/documents', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify({
                     title: formData.title,
                     description: formData.description,
@@ -135,11 +124,8 @@ export default function UploadPage() {
                     fileUrl: uploadedFileUrl,
                     avatar: uploadedAvatarUrl, // Send as avatar
                 }),
+                // apiFetch handles Content-Type and Authorization
             });
-
-            if (!res.ok) {
-                throw new Error('Failed to create document');
-            }
 
             alert('Đăng bán tài liệu thành công!');
             router.push('/seller/documents');

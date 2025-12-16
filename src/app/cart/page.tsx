@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 interface CartItem {
     id: string;
@@ -34,21 +35,8 @@ export default function CartPage() {
 
     const fetchCart = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                router.push('/login');
-                return;
-            }
-
-            const res = await fetch('http://localhost:4000/cart', {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setCart(data);
-            } else {
-                console.error('Failed to fetch cart');
-            }
+            const data = await apiFetch<Cart>('/cart');
+            setCart(data);
         } catch (err) {
             console.error(err);
         } finally {
@@ -57,42 +45,27 @@ export default function CartPage() {
     };
 
     const removeFromCart = async (itemId: string) => {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return;
-
         try {
-            const res = await fetch(`http://localhost:4000/cart/${itemId}`, {
+            await apiFetch(`/cart/${itemId}`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
             });
-            if (res.ok) {
-                fetchCart(); // Refresh
-            }
+            fetchCart(); // Refresh
         } catch (err) {
             console.error(err);
         }
     };
 
     const checkout = async () => {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return;
-
         try {
-            const res = await fetch('http://localhost:4000/orders/checkout', {
+            await apiFetch('/orders/checkout', {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
             });
 
-            if (res.ok) {
-                alert('Thanh toán thành công! Bạn có thể tải tài liệu ngay bây giờ.');
-                router.push('/profile'); // or /my-documents
-            } else {
-                const err = await res.json();
-                alert(`Thanh toán thất bại: ${err.message}`);
-            }
-        } catch (err) {
+            alert('Thanh toán thành công! Bạn có thể tải tài liệu ngay bây giờ.');
+            router.push('/profile'); // or /my-documents
+        } catch (err: any) {
             console.error(err);
-            alert('Lỗi thanh toán');
+            alert(`Thanh toán thất bại: ${err.message}`);
         }
     }
 

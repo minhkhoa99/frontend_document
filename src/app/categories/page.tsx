@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { SidebarMenu } from '@/components/sidebar-menu';
 import { BookOpen } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 interface Category {
     id: string;
@@ -19,10 +20,8 @@ export default function CategoriesPage() {
 
     useEffect(() => {
         // Using simple categories fetch or tree fetch depending on what backend provides
-        // For "Browse by Category" usually flat list or main parents are shown
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-        fetch(`${apiUrl}/categories/tree`)
-            .then(res => res.json())
+        // Public API
+        apiFetch<Category[]>('/categories/tree')
             .then(data => setCategories(data))
             .catch(err => console.error('Error fetching categories:', err))
             .finally(() => setLoading(false));

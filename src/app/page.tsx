@@ -8,6 +8,7 @@ import { SidebarMenu } from '@/components/sidebar-menu';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge'; // Will need to create Badge or remove
 import { Search, BookOpen, Download, Star, Filter } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 interface Category {
   id: string;
@@ -34,14 +35,12 @@ export default function Home() {
 
   useEffect(() => {
     // Fetch Categories
-    fetch('http://localhost:4000/categories')
-      .then(res => res.json())
+    apiFetch<Category[]>('/categories')
       .then(data => setCategories(data))
       .catch(err => console.error('Error fetching categories:', err));
 
     // Fetch Featured/Recent Documents
-    fetch('http://localhost:4000/documents')
-      .then(res => res.json())
+    apiFetch<Document[]>('/documents')
       .then(data => setFeaturedDocs(data)) // Assuming returns list
       .catch(err => console.error('Error fetching documents:', err));
   }, []);

@@ -21,28 +21,27 @@ interface OrderItem {
     };
 }
 
+import { apiFetch } from '@/lib/api';
+
 export default function SellerOrdersPage() {
     const [orders, setOrders] = useState<OrderItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('accessToken');
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-
-        // Wait, we need an API for this: GET /seller/orders
-        // Currently not implemented in backend controller.
-        // I will mock it or try to fetch if I implement it.
-        // Let's implement Frontend assuming API exists, then I'll add Backend API.
-        fetch(`${apiUrl}/seller/orders`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-            .then(res => res.json())
+        // Fetch Seller Orders using apiFetch (auto handled: cookies, standardized response)
+        apiFetch<OrderItem[]>('/seller/orders')
             .then(data => {
-                setOrders(data);
-                setLoading(false);
+                // Check if data is array (if not, maybe backend returned something else or error handled globally)
+                if (Array.isArray(data)) {
+                    setOrders(data);
+                } else {
+                    setOrders([]);
+                }
             })
             .catch(err => {
-                console.error(err);
+                console.error("Failed to fetch seller orders", err);
+            })
+            .finally(() => {
                 setLoading(false);
             });
     }, []);

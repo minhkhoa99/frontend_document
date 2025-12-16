@@ -4,6 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { ChevronRight, ChevronDown, Book, Folder } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 interface Menu {
     id: string;
@@ -18,12 +19,7 @@ export function SidebarMenu() {
     const [menus, setMenus] = React.useState<Menu[]>([]);
 
     React.useEffect(() => {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-        fetch(`${apiUrl}/menus/tree`)
-            .then((res) => {
-                if (!res.ok) throw new Error('Failed to fetch menus');
-                return res.json();
-            })
+        apiFetch<Menu[]>('/menus/tree')
             .then((data) => {
                 // Add isOpen state to each menu item for UI control
                 const addState = (items: Menu[]): Menu[] => items.map(item => ({

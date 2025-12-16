@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, FileText, MoreHorizontal, Edit, Trash, DollarSign, Download, Eye } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 interface Document {
     id: string;
@@ -31,30 +32,19 @@ export default function SellerDashboard() {
 
     useEffect(() => {
         const fetchData = async () => {
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                router.push('/login');
-                return;
-            }
-
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-
+            // Basic structure: fetch stats and documents in parallel or sequence
             try {
                 // Fetch Stats
-                const statsRes = await fetch(`${apiUrl}/seller/stats`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (statsRes.ok) {
-                    const statsData = await statsRes.json();
-                    setStats(statsData);
-                }
+                // Note: If backend endpoint doesn't exist, apiFetch throws.
+                // We'll wrap in individual try/catch if we want partial loading, or one big one.
+                const statsDataPromise = apiFetch<Stats>('/seller/stats');
+                const docsDataPromise = apiFetch<Document[]>('/seller/documents');
 
-                // Fetch Documents
-                const docsRes = await fetch(`${apiUrl}/seller/documents`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (docsRes.ok) {
-                    const docsData = await docsRes.json();
+                const [statsData, docsData] = await Promise.all([statsDataPromise, docsDataPromise]);
+
+                setStats(statsData);
+                // Ensure docsData is array
+                if (Array.isArray(docsData)) {
                     setDocuments(docsData);
                 }
             } catch (err) {

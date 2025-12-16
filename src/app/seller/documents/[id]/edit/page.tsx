@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { AlertCircle, ArrowLeft, UploadCloud, File, X, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+import { apiFetch } from '@/lib/api';
+// const API_URL = ... (managed by apiFetch)
 
 interface Category {
     id: string;
@@ -48,8 +49,8 @@ export default function EditDocumentPage() {
 
     useEffect(() => {
         // Fetch categories
-        fetch(`${API_URL}/categories`)
-            .then((res) => res.json())
+        // Fetch categories
+        apiFetch<Category[]>('/categories')
             .then((data) => setCategories(data))
             .catch((err) => console.error('Failed to fetch categories', err));
     }, []);
@@ -61,24 +62,20 @@ export default function EditDocumentPage() {
 
     const fetchDocument = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch(`${API_URL}/documents/${docId}`); // Public read for simplicity
+            // Fetch document details via apiFetch
+            const doc = await apiFetch<any>(`/documents/${docId}`);
 
-            if (res.ok) {
-                const doc = await res.json();
-                setFormData({
-                    title: doc.title,
-                    description: doc.description || '',
-                    price: doc.price ? doc.price.amount.toString() : '0',
-                    categoryId: doc.category ? doc.category.id : '',
-                });
-                setCurrentAvatar(doc.avatar || null);
-            } else {
-                setError('Không tìm thấy tài liệu');
-            }
+            setFormData({
+                title: doc.title,
+                description: doc.description || '',
+                price: doc.price ? doc.price.amount.toString() : '0',
+                categoryId: doc.category ? doc.category.id : '',
+            });
+            setCurrentAvatar(doc.avatar || null);
+
         } catch (err) {
             console.error(err);
-            setError('Lỗi kết nối');
+            setError('Không tìm thấy tài liệu hoặc lỗi kết nối');
         } finally {
             setLoading(false);
         }
@@ -100,18 +97,21 @@ export default function EditDocumentPage() {
         formData.append('file', fileToUpload);
 
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch(`${API_URL}/documents/upload`, {
+            // Upload using apiFetch, allowing it to handle headers (except Content-Type for FormData)
+            // NOTE: fetch automatically sets Content-Type to multipart/form-data with boundary when body is FormData
+            // We need to tell apiFetch NOT to set 'Content-Type': 'application/json'
+
+            // Actually, my apiFetch sets application/json by default.
+            // I should override it.
+            const data = await apiFetch<any>('/documents/upload', {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    // Overwriting Content-Type to undefined lets browser set it with boundary
+                    'Content-Type': undefined as any
                 }
             });
 
-            if (!res.ok) throw new Error(`${isAvatar ? 'Image' : 'File'} upload failed`);
-
-            const data = await res.json();
             if (isAvatar) {
                 setNewAvatarUrl(data.url);
             } else {
@@ -151,7 +151,7 @@ export default function EditDocumentPage() {
         setError(null);
 
         try {
-            const token = localStorage.getItem('accessToken');
+
 
             const payload: any = {
                 title: formData.title,
@@ -167,19 +167,10 @@ export default function EditDocumentPage() {
                 payload.avatar = newAvatarUrl;
             }
 
-            const res = await fetch(`${API_URL}/seller/documents/${docId}`, {
+            await apiFetch(`/seller/documents/${docId}`, {
                 method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify(payload),
             });
-
-            if (!res.ok) {
-                if (res.status === 403) throw new Error('Bạn không có quyền sửa tài liệu này');
-                throw new Error('Lỗi khi cập nhật tài liệu');
-            }
 
             alert('Cập nhật tài liệu thành công!');
             router.push('/seller/documents');

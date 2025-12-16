@@ -19,7 +19,8 @@ interface MyDocument {
     price?: { amount: number; currency: string };
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+import { apiFetch } from '@/lib/api';
+// const API_URL = ... (managed by apiFetch)
 
 export default function MyDocumentsPage() {
     const [documents, setDocuments] = useState<MyDocument[]>([]);
@@ -32,21 +33,11 @@ export default function MyDocumentsPage() {
 
     const fetchMyDocuments = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                router.push('/login');
-                return;
-            }
-
-            const res = await fetch(`${API_URL}/orders/my-documents`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            console.log(res.status);
-            if (res.ok) {
-                const data = await res.json();
+            // apiFetch handles tokens automatically
+            const data = await apiFetch<MyDocument[]>('/orders/my-documents');
+            // Assuming apiFetch unwraps, if data is array:
+            if (Array.isArray(data)) {
                 setDocuments(data);
-            } else {
-                console.error('Failed to fetch my documents');
             }
         } catch (err) {
             console.error(err);
@@ -57,34 +48,20 @@ export default function MyDocumentsPage() {
 
     const handleDownload = async (doc: MyDocument) => {
         try {
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                router.push('/login');
-                return;
-            }
-
-            const res = await fetch(`${API_URL}/documents/${doc.id}/download`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                if (data.url) {
-                    window.open(data.url, '_blank');
-                } else {
-                    alert('Lỗi: Không tìm thấy link tải.');
-                }
+            // apiFetch handles tokens automatically
+            const data = await apiFetch<any>(`/documents/${doc.id}/download`);
+            if (data.url) {
+                window.open(data.url, '_blank');
             } else {
-                if (res.status === 403) {
-                    alert('Bạn chưa có quyền tải tài liệu này (Vui lòng mua trước).');
-                } else {
-                    alert('Có lỗi xảy ra khi tải tài liệu.');
-                }
-                console.error('Download failed', res.status);
+                alert('Lỗi: Không tìm thấy link tải.');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Download error', error);
-            alert('Có lỗi xảy ra khi kết nối đến server.');
+            if (error.message.includes('403') || error.message.includes('Forbidden')) {
+                alert('Bạn chưa có quyền tải tài liệu này (Vui lòng mua trước).');
+            } else {
+                alert('Có lỗi xảy ra khi tải tài liệu: ' + error.message);
+            }
         }
     };
 

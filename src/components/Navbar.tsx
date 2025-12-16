@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, LogOut, LayoutDashboard, User as UserIcon, FileText } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/api';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -24,29 +25,19 @@ export function Navbar() {
 
     useEffect(() => {
         const checkAuth = () => {
-            const token = localStorage.getItem('accessToken');
-            if (token) {
-                try {
-                    // Simple JWT decode without external library
-                    const base64Url = token.split('.')[1];
-                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
-                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                    }).join(''));
-                    const payload = JSON.parse(jsonPayload);
-
-                    setUser({
-                        name: payload.fullName || payload.sub?.substring(0, 6) || 'User', // Fallback
-                        email: payload.email,
-                        role: payload.role
-                    });
-                } catch (e) {
-                    console.error("Invalid token", e);
-                    setUser(null);
-                }
-            } else {
-                setUser(null);
-            }
+            // Fetch profile via apiFetch (cookie auth)
+            // Suppress redirect if simply checking session state
+            apiFetch<any>('/auth/profile', { redirectOn401: false } as any)
+                .then(data => {
+                    if (data) {
+                        setUser({
+                            name: data.fullName || 'User',
+                            email: data.email,
+                            role: data.role
+                        });
+                    }
+                })
+                .catch(() => setUser(null)); // Verify fails or 401
         };
 
         checkAuth();
@@ -54,12 +45,16 @@ export function Navbar() {
         return () => window.removeEventListener('authChange', checkAuth);
     }, []);
 
-    const handleLogout = () => {
-        localStorage.removeItem('accessToken');
+    const handleLogout = async () => {
+        try {
+            await apiFetch('/auth/logout', { method: 'POST' });
+        } catch (e) {
+            console.error(e);
+        }
         setUser(null);
         window.dispatchEvent(new Event('authChange'));
         router.push('/');
-        router.refresh();
+        // router.refresh();
     };
 
     // Hide navbar on auth pages, seller dashboard, and admin dashboard
