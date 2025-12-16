@@ -1,18 +1,21 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { apiFetch } from '@/lib/api';
 
 export default function SellerSettingsPage() {
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [profile, setProfile] = useState({
-        displayName: 'Nguyen Van A',
-        email: 'teacher.a@example.com',
-        phone: '0901234567',
+        displayName: '',
+        email: '',
+        phone: '',
     });
 
     const [bank, setBank] = useState({
@@ -20,6 +23,47 @@ export default function SellerSettingsPage() {
         accountNumber: '1234567890',
         accountName: 'NGUYEN VAN A',
     });
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const data = await apiFetch<any>('/users/profile');
+                setProfile({
+                    displayName: data.fullName || '',
+                    email: data.email || '',
+                    phone: data.phone || '',
+                });
+            } catch (error) {
+                console.error("Failed to load profile", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProfile();
+    }, []);
+
+    const handleSaveProfile = async () => {
+        setSaving(true);
+        try {
+            await apiFetch('/users/profile', {
+                method: 'PATCH',
+                body: JSON.stringify({
+                    fullName: profile.displayName,
+                    phone: profile.phone
+                }),
+            });
+            alert('Cập nhật thành công!');
+            // Refresh sidebar/navbar
+            window.location.reload();
+        } catch (error) {
+            console.error(error);
+            alert('Cập nhật thất bại');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) return <div>Đang tải...</div>;
 
     return (
         <div className="space-y-6">
@@ -69,7 +113,9 @@ export default function SellerSettingsPage() {
                                 />
                             </div>
                             <div className="pt-4">
-                                <Button>Lưu thay đổi</Button>
+                                <Button onClick={handleSaveProfile} disabled={saving}>
+                                    {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>

@@ -120,7 +120,9 @@ export default function Home() {
                     )}
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
                       <div className="flex gap-2">
-                        <Button size="sm" className="w-full bg-white text-black hover:bg-gray-100" variant="secondary">Xem</Button>
+                        <Link href={`/documents/${doc.id}`} className="w-full">
+                          <Button size="sm" className="w-full bg-white text-black hover:bg-gray-100" variant="secondary">Xem</Button>
+                        </Link>
                       </div>
                     </div>
                   </div>
@@ -129,10 +131,7 @@ export default function Home() {
                       <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
                         {doc.category?.name || 'Chung'}
                       </span>
-                      <div className="flex items-center text-amber-400 text-xs font-bold">
-                        <Star className="h-3 w-3 mr-1 fill-current" />
-                        4.8
-                      </div>
+
                     </div>
                     <h3 className="font-semibold text-gray-900 line-clamp-2 mb-1" title={doc.title}>
                       {doc.title}

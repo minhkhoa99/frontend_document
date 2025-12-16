@@ -15,15 +15,19 @@ export default function ProfilePage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [user, setUser] = useState<{ fullName: string; email: string; role: string } | null>(null);
-    const [formData, setFormData] = useState({ fullName: '', bio: '' });
+    const [user, setUser] = useState<{ fullName: string; email: string; role: string; phone?: string } | null>(null);
+    const [formData, setFormData] = useState({ fullName: '', bio: '', phone: '' });
 
     useEffect(() => {
         const fetchProfile = async () => {
             try {
                 const data = await apiFetch<any>('/users/profile');
                 setUser(data);
-                setFormData({ fullName: data.fullName, bio: '' });
+                setFormData({
+                    fullName: data.fullName,
+                    bio: '',
+                    phone: data.phone || ''
+                });
             } catch (error) {
                 console.error(error);
                 // apiFetch handles redirect on 401 if not suppressed
@@ -40,19 +44,13 @@ export default function ProfilePage() {
         try {
             await apiFetch('/users/profile', {
                 method: 'PATCH',
-                body: JSON.stringify({ fullName: formData.fullName }),
+                body: JSON.stringify({
+                    fullName: formData.fullName,
+                    phone: formData.phone
+                }),
             });
 
             alert('Cập nhật thành công!');
-
-            // Removed manual check as apiFetch throws
-
-
-            alert('Cập nhật thành công!');
-            // Update local storage token if name changed? 
-            // Ideally we need to refresh token to update name in it, 
-            // but for now the profile page shows updated data.
-            // Navbar will still show old name until logout/login unless we implement token refresh or event bus.
             window.location.reload(); // Simple way to refresh navbar data if it fetches on load
         } catch (error) {
             alert('Có lỗi xảy ra');
@@ -67,10 +65,9 @@ export default function ProfilePage() {
         <div className="container mx-auto py-10 px-4">
             <h1 className="text-3xl font-bold mb-6">Cài đặt tài khoản</h1>
             <Tabs defaultValue="general" className="w-full max-w-4xl">
-                <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+                <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
                     <TabsTrigger value="general">Thông tin chung</TabsTrigger>
                     <TabsTrigger value="security">Bảo mật</TabsTrigger>
-                    <TabsTrigger value="billing">Thanh toán</TabsTrigger>
                 </TabsList>
                 <TabsContent value="general" className="mt-6 space-y-4">
                     <Card>
@@ -95,15 +92,13 @@ export default function ProfilePage() {
                                 <p className="text-sm text-muted-foreground">Email không thể thay đổi.</p>
                             </div>
                             <div className="grid w-full items-center gap-1.5">
-                                <Label htmlFor="bio">Giới thiệu ngắn</Label>
+                                <Label htmlFor="phone">Số điện thoại</Label>
                                 <Input
-                                    id="bio"
-                                    placeholder="Giới thiệu về bản thân..."
-                                    value={formData.bio}
-                                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                                    disabled
+                                    id="phone"
+                                    value={formData.phone}
+                                    placeholder="0912345678"
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 />
-                                <p className="text-xs text-muted-foreground">Tính năng đang phát triển.</p>
                             </div>
                         </CardContent>
                         <CardFooter>
@@ -128,17 +123,6 @@ export default function ProfilePage() {
                                 <Input id="current" type="password" />
                             </div>
                             {/* ... disabled inputs ... */}
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="billing" className="mt-6 space-y-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Phương thức thanh toán</CardTitle>
-                            <CardDescription>Quản lý ví và thẻ ngân hàng.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground">Chức năng đang được phát triển.</p>
                         </CardContent>
                     </Card>
                 </TabsContent>
