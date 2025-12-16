@@ -22,8 +22,19 @@ export function Navbar() {
     const pathname = usePathname();
     const router = useRouter();
     const [user, setUser] = useState<{ name: string; email: string; role: string } | null>(null);
+    const [cartCount, setCartCount] = useState(0);
 
-
+    const fetchCartCount = () => {
+        apiFetch('/cart', { redirectOn401: false } as any)
+            .then((data: any) => {
+                if (data && Array.isArray(data.items)) {
+                    setCartCount(data.items.length);
+                } else {
+                    setCartCount(0);
+                }
+            })
+            .catch(() => setCartCount(0));
+    };
 
     useEffect(() => {
         const checkAuth = () => {
@@ -37,14 +48,25 @@ export function Navbar() {
                             email: data.email,
                             role: data.role
                         });
+                        fetchCartCount(); // Fetch cart if auth successful
                     }
                 })
-                .catch(() => setUser(null)); // Verify fails or 401
+                .catch(() => {
+                    setUser(null);
+                    setCartCount(0);
+                });
         };
 
         checkAuth();
         window.addEventListener('authChange', checkAuth);
-        return () => window.removeEventListener('authChange', checkAuth);
+
+        // Listen for global cart update events
+        window.addEventListener('cartChange', fetchCartCount);
+
+        return () => {
+            window.removeEventListener('authChange', checkAuth);
+            window.removeEventListener('cartChange', fetchCartCount);
+        };
     }, []);
 
     const handleLogout = async () => {
@@ -60,6 +82,7 @@ export function Navbar() {
         Cookies.remove('accessToken');
         Cookies.remove('refreshToken');
         setUser(null);
+        setCartCount(0);
         window.dispatchEvent(new Event('authChange'));
         router.push('/');
         // router.refresh();
@@ -84,9 +107,16 @@ export function Navbar() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon">
-                        <ShoppingCart className="h-5 w-5" />
-                    </Button>
+                    <Link href="/cart">
+                        <Button variant="ghost" size="icon" className="relative">
+                            <ShoppingCart className="h-5 w-5" />
+                            {cartCount > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm ring-1 ring-white">
+                                    {cartCount > 9 ? '9+' : cartCount}
+                                </span>
+                            )}
+                        </Button>
+                    </Link>
 
                     {user ? (
                         <DropdownMenu>

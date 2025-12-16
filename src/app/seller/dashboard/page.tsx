@@ -47,8 +47,12 @@ export default function SellerDashboard() {
                 if (Array.isArray(docsData)) {
                     setDocuments(docsData);
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Failed to load seller dashboard data", err);
+                // Check if status is 403 (Forbidden) or 401 (Unauthorized)
+                if (err.status === 403 || err.status === 401 || err.message?.includes('403') || err.message?.includes('Forbidden')) {
+                    router.push('/');
+                }
             } finally {
                 setLoading(false);
             }
