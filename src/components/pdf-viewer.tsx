@@ -121,10 +121,10 @@ export default function PdfViewer({ fileUrl, isFree, canViewFull, price, buyNow,
                                 <Lock className="h-10 w-10 text-primary mx-auto mb-3" />
                                 <h3 className="font-bold text-gray-900 mb-2 text-lg">Nội dung bị khóa</h3>
                                 <p className="text-sm text-gray-600 mb-5">
-                                    {isFree ? 'Tải xuống để xem đầy đủ' : 'Mua tài liệu để xem đầy đủ nội dung'}
+                                    {isFree ? 'Nhận miễn phí để xem đầy đủ' : 'Mua tài liệu để xem đầy đủ nội dung'}
                                 </p>
                                 <Button onClick={buyNow} size="default" className="w-full font-semibold shadow-lg shadow-primary/20">
-                                    {isFree ? 'Tải xuống ngay' : `Mua ngay (${price.toLocaleString()} đ)`}
+                                    {isFree ? 'Nhận miễn phí' : `Mua ngay (${price.toLocaleString()} đ)`}
                                 </Button>
                             </div>
                         </div>
@@ -138,7 +138,7 @@ export default function PdfViewer({ fileUrl, isFree, canViewFull, price, buyNow,
                 <div key="more" className="p-12 text-center bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl mt-6">
                     <p className="text-gray-500 mb-4 font-medium">... và còn {numPages - limitRender} trang nữa</p>
                     <Button onClick={buyNow} size="lg" className="px-8">
-                        {isFree ? 'Tải xuống để xem toàn bộ' : 'Mua để mở khóa toàn bộ tài liệu'}
+                        {isFree ? 'Nhận miễn phí để xem toàn bộ' : 'Mua để mở khóa toàn bộ tài liệu'}
                     </Button>
                 </div>
             );

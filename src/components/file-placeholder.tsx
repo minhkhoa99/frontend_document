@@ -61,9 +61,9 @@ export default function FilePlaceholder({ extension, isFree, canViewFull, price,
             ) : (
                 <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 text-center">
                     <Lock className="h-8 w-8 text-primary mx-auto mb-2" />
-                    <p className="text-sm text-gray-600 mb-4">Mua tài liệu để tải xuống</p>
+                    <p className="text-sm text-gray-600 mb-4">{isFree ? 'Nhận tài liệu để tải xuống' : 'Mua tài liệu để tải xuống'}</p>
                     <Button onClick={buyNow} size="default" className="w-full font-semibold">
-                        {isFree ? 'Tải xuống ngay' : `Mua ngay (${price.toLocaleString()} đ)`}
+                        {isFree ? 'Nhận miễn phí' : `Mua ngay (${price.toLocaleString()} đ)`}
                     </Button>
                 </div>
             )}

@@ -10,13 +10,26 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { AlertCircle, ArrowLeft, UploadCloud, File, X, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 
-import { apiFetch } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
+import { Upload, message } from 'antd';
+import ImgCrop from 'antd-img-crop';
+import { LoadingOutlined, PlusOutlined } from '@ant-design/icons';
+import Cookies from 'js-cookie';
+import type { UploadChangeParam } from 'antd/es/upload';
+import type { RcFile, UploadFile, UploadProps } from 'antd/es/upload/interface';
 // const API_URL = ... (managed by apiFetch)
 
 interface Category {
     id: string;
     name: string;
 }
+
+const configThumbTopic = {
+    upload: [
+        { width: 800, height: 600 },
+    ],
+};
+const config_size = JSON.stringify(configThumbTopic.upload);
 
 export default function EditDocumentPage() {
     const router = useRouter();
@@ -139,9 +152,42 @@ export default function EditDocumentPage() {
         }
     };
 
-    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            handleFileUpload(e.target.files[0], true);
+    // Antd Upload Handlers
+    const [loadingAvatar, setLoadingAvatar] = useState(false);
+
+    const beforeUpload = (file: RcFile) => {
+        const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/webp';
+        if (!isJpgOrPng) {
+            message.error('Bạn chỉ có thể tải lên file JPG/PNG/WEBP!');
+        }
+        const isLt2M = file.size / 1024 / 1024 < 2;
+        if (!isLt2M) {
+            message.error('Hình ảnh phải nhỏ hơn 2MB!');
+        }
+        return isJpgOrPng && isLt2M;
+    };
+
+    const handleAvatarChange: UploadProps['onChange'] = (info: UploadChangeParam<UploadFile>) => {
+        if (info.file.status === 'uploading') {
+            setLoadingAvatar(true);
+            return;
+        }
+        if (info.file.status === 'done') {
+            setLoadingAvatar(false);
+            const response = info.file.response;
+            if (response && response.success && response.data && response.data.url) {
+                setNewAvatarUrl(response.data.url);
+                message.success('Tải ảnh bìa thành công');
+            } else if (response && response.url) {
+                setNewAvatarUrl(response.url);
+                message.success('Tải ảnh bìa thành công');
+            } else {
+                message.error('Lỗi tải ảnh bìa');
+            }
+        }
+        if (info.file.status === 'error') {
+            setLoadingAvatar(false);
+            message.error(`${info.file.name} file upload failed.`);
         }
     };
 
@@ -200,14 +246,17 @@ export default function EditDocumentPage() {
 
                         {/* File Upload Update */}
                         <div className="space-y-2">
-                            <Label>Cập nhật tệp tài liệu (PDF) - <span className="text-gray-500 font-normal">Để trống nếu không thay đổi</span></Label>
+                            <Label>Cập nhật tệp tài liệu - <span className="text-gray-500 font-normal">Để trống nếu không thay đổi</span></Label>
                             <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${file ? 'border-green-500 bg-green-50/30' : 'border-gray-300 hover:border-primary/50'}`}>
                                 {!file ? (
                                     <label className="cursor-pointer block w-full h-full">
                                         <UploadCloud className="mx-auto h-10 w-10 text-gray-400" />
-                                        <span className="mt-2 block text-sm font-medium text-gray-900">
-                                            Chọn tệp mới để thay thế
-                                        </span>
+                                        <div className="mt-2 text-sm text-gray-900">
+                                            <p className="font-medium text-blue-600 mb-1 line-clamp-1 px-4">
+                                                File hiện tại: {formData.title}
+                                            </p>
+                                            <p>Nhấn để chọn tệp mới nếu muốn thay thế</p>
+                                        </div>
                                         <input
                                             type="file"
                                             className="hidden"
@@ -241,43 +290,43 @@ export default function EditDocumentPage() {
                         {/* Avatar Upload Update */}
                         <div className="space-y-2">
                             <Label>Cập nhật ảnh bìa - <span className="text-gray-500 font-normal">Để trống nếu không thay đổi</span></Label>
-                            <div className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${avatarFile ? 'border-blue-500 bg-blue-50/30' : 'border-gray-300 hover:border-blue-400/50'}`}>
-                                {!avatarFile ? (
-                                    <label className="cursor-pointer block w-full h-full flex flex-col items-center justify-center">
-                                        {currentAvatar ? (
-                                            <div className="mb-2">
-                                                <img src={currentAvatar} alt="Current" className="h-20 object-cover rounded shadow-sm mx-auto" />
-                                                <span className="text-xs text-blue-600 block mt-1">Ảnh hiện tại</span>
+                            <div className="border border-gray-200 rounded-lg p-4 flex justify-center">
+                                <ImgCrop rotate aspect={800 / 600} quality={1} fillColor="transparent">
+                                    <Upload
+                                        name="file"
+                                        listType="picture-card"
+                                        className="avatar-uploader"
+                                        showUploadList={false}
+                                        action={`${API_URL}/documents/upload?configThumString=${config_size}`}
+                                        beforeUpload={beforeUpload}
+                                        onChange={handleAvatarChange}
+                                        headers={{
+                                            Authorization: `Bearer ${Cookies.get('accessToken')}`
+                                        }}
+                                    >
+                                        {loadingAvatar ? (
+                                            <div>
+                                                <LoadingOutlined />
+                                                <div style={{ marginTop: 8 }}>Đang tải...</div>
                                             </div>
                                         ) : (
-                                            <ImageIcon className="h-8 w-8 text-gray-400 mb-2" />
-                                        )}
-                                        <span className="text-sm text-gray-600">Chọn ảnh mới (JPG, PNG)</span>
-                                        <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
-                                    </label>
-                                ) : (
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-3">
-                                            {/* Show preview of NEW file if we could (need FileReader), for now just show icon or name */}
-                                            {newAvatarUrl ? (
-                                                <img src={newAvatarUrl} alt="Preview" className="h-12 w-12 object-cover rounded" />
+                                            newAvatarUrl ? (
+                                                /* eslint-disable-next-line @next/next/no-img-element */
+                                                <img src={newAvatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                             ) : (
-                                                <div className="bg-blue-100 p-2 rounded-full">
-                                                    <ImageIcon className="h-6 w-6 text-blue-600" />
-                                                </div>
-                                            )}
-                                            <div className="text-left overflow-hidden">
-                                                <p className="text-sm font-medium text-gray-900 truncate max-w-[150px]">{avatarFile.name}</p>
-                                                <p className="text-xs text-gray-500">{uploadingAvatar ? 'Đang tải...' : 'New Image'}</p>
-                                            </div>
-                                        </div>
-                                        {!uploadingAvatar && (
-                                            <Button variant="ghost" size="sm" type="button" onClick={() => { setAvatarFile(null); setNewAvatarUrl(null); }}>
-                                                <X className="h-4 w-4" />
-                                            </Button>
+                                                currentAvatar ? (
+                                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                                    <img src={currentAvatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                ) : (
+                                                    <div>
+                                                        <PlusOutlined />
+                                                        <div style={{ marginTop: 8 }}>Upload</div>
+                                                    </div>
+                                                )
+                                            )
                                         )}
-                                    </div>
-                                )}
+                                    </Upload>
+                                </ImgCrop>
                             </div>
                         </div>
 

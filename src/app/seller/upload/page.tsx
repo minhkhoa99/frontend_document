@@ -8,7 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { UploadCloud, File, X, CheckCircle, AlertCircle, Image as ImageIcon } from 'lucide-react';
-import { apiFetch } from '@/lib/api';
+
+import { apiFetch, API_URL } from '@/lib/api';
+import { Upload, message } from 'antd';
+import ImgCrop from 'antd-img-crop';
+import { LoadingOutlined, PlusOutlined } from '@ant-design/icons';
+import Cookies from 'js-cookie';
+import type { UploadChangeParam } from 'antd/es/upload';
+import type { RcFile, UploadFile, UploadProps } from 'antd/es/upload/interface';
 
 // const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'; // Handled by apiFetch
 
@@ -16,6 +23,14 @@ interface Category {
     id: string;
     name: string;
 }
+
+const configThumbTopic = {
+    upload: [
+        { width: 800, height: 600 },
+    ],
+    // name: { mobile: "390x130", website: "1920x640", smart_tv: "1920x640" }
+};
+const config_size = JSON.stringify(configThumbTopic.upload);
 
 export default function UploadPage() {
     const router = useRouter();
@@ -97,9 +112,54 @@ export default function UploadPage() {
         }
     };
 
-    const handlePreviewImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            handleFileUpload(e.target.files[0], true);
+    // Antd Upload Handlers
+    const [loadingAvatar, setLoadingAvatar] = useState(false);
+
+    const beforeUpload = (file: RcFile) => {
+        const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/webp';
+        if (!isJpgOrPng) {
+            message.error('Bạn chỉ có thể tải lên file JPG/PNG/WEBP!');
+        }
+        const isLt2M = file.size / 1024 / 1024 < 2;
+        if (!isLt2M) {
+            message.error('Hình ảnh phải nhỏ hơn 2MB!');
+        }
+        return isJpgOrPng && isLt2M;
+    };
+
+    const handleAvatarChange: UploadProps['onChange'] = (info: UploadChangeParam<UploadFile>) => {
+        if (info.file.status === 'uploading') {
+            setLoadingAvatar(true);
+            return;
+        }
+        if (info.file.status === 'done') {
+            // Get this url from response in real world.
+            // Backend returns { url: ... } inside info.file.response if checking standard behavior, 
+            // but our interceptor/api logic might wrap it. 
+            // However, Antd Upload uses XHR directly, not our apiFetch wrapper.
+            // So we need to parse info.file.response.
+            // Our backend returns { success: true, data: { url: ... } } or just { url: ... } depending on interceptor bypass?
+            // Wait, DocumentsController.uploadFile returns `documentsService.upload(file)` which returns `{ url: fileUrl, path: fileName }`.
+            // But NestJS Interceptor `TransformInterceptor` wraps it in `data: { ... }, success: true`.
+            // So response structure is { success: true, data: { url: ..., path: ... }, ... }
+
+            setLoadingAvatar(false);
+            const response = info.file.response;
+            if (response && response.success && response.data && response.data.url) {
+                setUploadedAvatarUrl(response.data.url);
+                setPreviewImage(info.file.originFileObj as File); // Just for state check compatibility if needed
+                message.success('Tải ảnh bìa thành công');
+            } else if (response && response.url) {
+                // Fallback if interceptor disabled
+                setUploadedAvatarUrl(response.url);
+                message.success('Tải ảnh bìa thành công');
+            } else {
+                message.error('Lỗi tải ảnh bìa');
+            }
+        }
+        if (info.file.status === 'error') {
+            setLoadingAvatar(false);
+            message.error(`${info.file.name} file upload failed.`);
         }
     };
 
@@ -182,36 +242,38 @@ export default function UploadPage() {
                         {/* Avatar Image Upload Area */}
                         <div className="space-y-2">
                             <Label>Ảnh bìa (Tùy chọn)</Label>
-                            <div className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${previewImage ? 'border-blue-500 bg-blue-50/30' : 'border-gray-300 hover:border-blue-400/50'}`}>
-                                {!previewImage ? (
-                                    <label className="cursor-pointer block w-full h-full flex flex-col items-center justify-center">
-                                        <ImageIcon className="h-8 w-8 text-gray-400 mb-2" />
-                                        <span className="text-sm text-gray-600">Thêm ảnh bìa (JPG, PNG)</span>
-                                        <input type="file" className="hidden" accept="image/*" onChange={handlePreviewImageChange} />
-                                    </label>
-                                ) : (
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-3">
-                                            {/* If uploadedAvatarUrl exists, show image preview, else show icon */}
-                                            {uploadedAvatarUrl ? (
-                                                <img src={uploadedAvatarUrl} alt="Preview" className="h-12 w-12 object-cover rounded" />
-                                            ) : (
-                                                <div className="bg-blue-100 p-2 rounded-full">
-                                                    <ImageIcon className="h-6 w-6 text-blue-600" />
-                                                </div>
-                                            )}
-                                            <div className="text-left overflow-hidden max-w-[200px]">
-                                                <p className="text-sm font-medium text-gray-900 truncate">{previewImage.name}</p>
-                                                <p className="text-xs text-gray-500">{uploadingPreview ? 'Đang tải...' : 'Đã tải lên'}</p>
+                            <div className="border border-gray-200 rounded-lg p-4 flex justify-center">
+                                <ImgCrop rotate aspect={800 / 600} quality={1} fillColor="transparent">
+                                    <Upload
+                                        name="file"
+                                        listType="picture-card"
+                                        className="avatar-uploader"
+                                        showUploadList={false}
+                                        action={`${API_URL}/documents/upload?configThumString=${config_size}`}
+                                        beforeUpload={beforeUpload}
+                                        onChange={handleAvatarChange}
+                                        headers={{
+                                            Authorization: `Bearer ${Cookies.get('accessToken')}`
+                                        }}
+                                    >
+                                        {loadingAvatar ? (
+                                            <div>
+                                                <LoadingOutlined />
+                                                <div style={{ marginTop: 8 }}>Đang tải...</div>
                                             </div>
-                                        </div>
-                                        {!uploadingPreview && (
-                                            <Button variant="ghost" size="sm" type="button" onClick={() => { setPreviewImage(null); setUploadedAvatarUrl(null); }}>
-                                                <X className="h-4 w-4" />
-                                            </Button>
+                                        ) : (
+                                            uploadedAvatarUrl ? (
+                                                /* eslint-disable-next-line @next/next/no-img-element */
+                                                <img src={uploadedAvatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : (
+                                                <div>
+                                                    <PlusOutlined />
+                                                    <div style={{ marginTop: 8 }}>Upload</div>
+                                                </div>
+                                            )
                                         )}
-                                    </div>
-                                )}
+                                    </Upload>
+                                </ImgCrop>
                             </div>
                         </div>
 

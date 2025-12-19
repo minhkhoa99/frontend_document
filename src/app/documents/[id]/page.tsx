@@ -71,7 +71,7 @@ export default function DocumentDetailPage() {
     if (!document) return <div className="text-center py-20">Không tìm thấy tài liệu</div>;
 
     const isFree = !document.price || document.price.amount === 0;
-    const canViewFull = isFree || document.isPurchased;
+    const canViewFull = document.isPurchased;
 
     // Extract file extension
     const getFileExtension = (url: string) => {
@@ -157,7 +157,7 @@ export default function DocumentDetailPage() {
                                     <div className="text-3xl font-bold text-primary mb-1">
                                         {isFree ? 'Miễn phí' : `${document.price?.amount.toLocaleString()} đ`}
                                     </div>
-                                    <div className="text-sm text-gray-500">{canViewFull ? 'Bạn đã sở hữu tài liệu này' : 'Thanh toán một lần'}</div>
+                                    <div className="text-sm text-gray-500">{canViewFull ? 'Bạn đã sở hữu tài liệu này' : (isFree ? 'Sở hữu vĩnh viễn' : 'Thanh toán một lần')}</div>
                                 </div>
 
                                 <div className="space-y-3">
@@ -168,7 +168,7 @@ export default function DocumentDetailPage() {
                                     ) : (
                                         <>
                                             <Button className="w-full text-lg h-12" size="lg" onClick={buyNow}>
-                                                <ShoppingCart className="mr-2 h-5 w-5" /> Mua ngay
+                                                <ShoppingCart className="mr-2 h-5 w-5" /> {isFree ? 'Nhận miễn phí' : 'Mua ngay'}
                                             </Button>
                                             <Button variant="outline" className="w-full" onClick={addToCart}>
                                                 Thêm vào giỏ
