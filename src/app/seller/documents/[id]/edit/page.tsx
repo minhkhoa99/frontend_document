@@ -22,8 +22,8 @@ import type { RcFile, UploadFile, UploadProps } from 'antd/es/upload/interface';
 interface Category {
     id: string;
     name: string;
+    parent?: any;
 }
-
 const configThumbTopic = {
     upload: [
         { width: 800, height: 600 },
@@ -50,6 +50,7 @@ export default function EditDocumentPage() {
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const [newAvatarUrl, setNewAvatarUrl] = useState<string | null>(null);
     const [currentAvatar, setCurrentAvatar] = useState<string | null>(null);
+    const [loadingAvatar, setLoadingAvatar] = useState(false);
 
     const [categories, setCategories] = useState<Category[]>([]);
 
@@ -62,9 +63,12 @@ export default function EditDocumentPage() {
 
     useEffect(() => {
         // Fetch categories
-        // Fetch categories
         apiFetch<Category[]>('/categories')
-            .then((data) => setCategories(data))
+            .then((data) => {
+                // Only show sub-categories (those that have a parent)
+                const subCategories = data.filter(cat => cat.parent);
+                setCategories(subCategories);
+            })
             .catch((err) => console.error('Failed to fetch categories', err));
     }, []);
 
@@ -153,7 +157,7 @@ export default function EditDocumentPage() {
     };
 
     // Antd Upload Handlers
-    const [loadingAvatar, setLoadingAvatar] = useState(false);
+
 
     const beforeUpload = (file: RcFile) => {
         const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/webp';
@@ -350,11 +354,16 @@ export default function EditDocumentPage() {
                                 value={formData.categoryId}
                                 onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
                                 required
+                                disabled={categories.length === 0}
                             >
                                 <option value="" disabled>Chọn danh mục</option>
-                                {categories.map((cat) => (
-                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                ))}
+                                {categories.length > 0 ? (
+                                    categories.map((cat) => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))
+                                ) : (
+                                    <option value="" disabled>Không có danh mục khả dụng</option>
+                                )}
                             </select>
                         </div>
 

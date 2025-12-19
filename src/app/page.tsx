@@ -9,6 +9,7 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'; // Will need to create Badge or remove
 import { Search, BookOpen, Download, Star, Filter, ShoppingCart, ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { ContentBlocks } from '@/components/content-blocks';
 
 interface Category {
   id: string;
@@ -156,138 +157,13 @@ export default function Home() {
 
         {/* Main Content Area */}
         <div className="flex-1">
-
-
-          {/* Featured Documents Section */}
-          <section className="pb-16" id="featured-docs">
-            <div className="flex items-center justify-between mb-10">
-              <h2 className="text-2xl font-bold tracking-tight text-gray-900">
-                {appliedSearch ? `Kết quả tìm kiếm cho: "${appliedSearch}"` : 'Tài liệu nổi bật'}
-              </h2>
-              <div className="flex gap-2">
-                <Button
-                  variant={sort === 'newest' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => { setSort('newest'); setPage(1); }}
-                  className={sort === 'newest' ? 'bg-blue-600 text-white hover:bg-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'}
-                >
-                  Mới nhất
-                </Button>
-                <Button
-                  variant={sort === 'popular' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => { setSort('popular'); setPage(1); }}
-                  className={sort === 'popular' ? 'bg-blue-600 text-white hover:bg-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'}
-                >
-                  Phổ biến
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {featuredDocs.length > 0 ? featuredDocs.map((doc) => (
-                <Card key={doc.id} className="overflow-hidden hover:shadow-lg transition-shadow border-gray-200 flex flex-col h-full">
-                  <div className="aspect-[4/3] bg-gray-100 relative group overflow-hidden">
-                    {doc.avatar ? (
-                      <img
-                        src={doc.avatar}
-                        alt={doc.title}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-gray-400 bg-gray-50">
-                        <div className="text-center p-4">
-                          <div className="text-4xl font-bold mb-2 opacity-20">PDF</div>
-                          <div className="text-xs uppercase tracking-wider">Xem trước</div>
-                        </div>
-                      </div>
-                    )}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                      <div className="flex gap-2">
-                        <Link href={`/documents/${doc.id}`} className="w-full">
-                          <Button size="sm" className="w-full bg-white text-black hover:bg-gray-100" variant="secondary">Xem</Button>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                  <CardContent className="p-4 flex flex-col flex-1">
-                    <div className="mb-2">
-                      <span className="inline-block px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 text-xs font-bold">
-                        {doc.category?.name || 'Chung'}
-                      </span>
-                    </div>
-
-                    <h3 className="font-bold text-gray-900 line-clamp-2 mb-1 text-base" title={doc.title}>
-                      <Link href={`/documents/${doc.id}`} className="hover:text-blue-600 transition-colors">
-                        {doc.title}
-                      </Link>
-                    </h3>
-
-                    <p className="text-sm text-gray-500 mb-4">Bởi {doc.author?.fullName || 'Ẩn danh'}</p>
-
-                    <div className="flex items-center justify-between mt-auto">
-                      <span className="font-bold text-blue-600 text-lg">
-                        {doc.price && doc.price.amount > 0 ? `${doc.price.amount.toLocaleString()} đ` : 'Miễn phí'}
-                      </span>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-full"
-                        onClick={() => addToCart(doc.id)}
-                      >
-                        <ShoppingCart className="h-5 w-5" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )) : (
-                <p className="col-span-full text-center text-gray-500">Chưa tìm thấy tài liệu nào. Hãy là người đầu tiên tải lên!</p>
-              )}
-            </div>
-
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="mt-10 flex justify-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="h-9 w-9 rounded-md border-gray-200"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(p => p === 1 || p === totalPages || (p >= page - 1 && p <= page + 1))
-                  .map((p, i, arr) => (
-                    <div key={p} className="flex items-center">
-                      {i > 0 && p > arr[i - 1] + 1 && <span className="mx-1 text-gray-400">...</span>}
-                      <Button
-                        variant={page === p ? 'default' : 'outline'}
-                        size="icon"
-                        onClick={() => setPage(p)}
-                        className={`h-9 w-9 rounded-md ${page === p ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
-                      >
-                        {p}
-                      </Button>
-                    </div>
-                  ))}
-
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="h-9 w-9 rounded-md border-gray-200"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </section>
+          {/* Dynamic Content Blocks */}
+          <div className="py-8">
+            <ContentBlocks />
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
