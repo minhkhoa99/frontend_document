@@ -18,6 +18,33 @@ export default function ProfilePage() {
     const [user, setUser] = useState<{ fullName: string; email: string; role: string; phone?: string } | null>(null);
     const [formData, setFormData] = useState({ fullName: '', bio: '', phone: '' });
 
+    // Change Password States: 'init' (input pass) -> 'otp'
+    const [cpStep, setCpStep] = useState<'init' | 'otp'>('init');
+    const [cpLoading, setCpLoading] = useState(false);
+    const [otpCode, setOtpCode] = useState('');
+    const [signKey, setSignKey] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+
+    // Timer state
+    const [timeLeft, setTimeLeft] = useState(0);
+
+    // Countdown effect
+    useEffect(() => {
+        if (cpStep === 'otp' && timeLeft > 0) {
+            const timer = setInterval(() => {
+                setTimeLeft((prev) => prev - 1);
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [cpStep, timeLeft]);
+
+    const formatTime = (seconds: number) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    };
+
     useEffect(() => {
         const fetchProfile = async () => {
             try {
@@ -58,6 +85,64 @@ export default function ProfilePage() {
             setSaving(false);
         }
     };
+
+    const handleChangePasswordInit = async () => {
+        if (!user?.phone) {
+            alert('Vui lòng cập nhật số điện thoại trước khi đổi mật khẩu.');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            alert('Mật khẩu xác nhận không khớp');
+            return;
+        }
+        if (newPassword.length < 6) {
+            alert('Mật khẩu phải có ít nhất 6 ký tự');
+            return;
+        }
+
+        setCpLoading(true);
+        try {
+            const resOtp: any = await apiFetch('/auth/verify_otp', {
+                method: 'POST',
+                body: JSON.stringify({ phone: user.phone }),
+            });
+            if (resOtp.expiresIn) {
+                setTimeLeft(resOtp.expiresIn);
+            } else {
+                setTimeLeft(180);
+            }
+            setCpStep('otp');
+        } catch (error: any) {
+            alert(error.message || 'Lỗi gửi OTP');
+        } finally {
+            setCpLoading(false);
+        }
+    };
+
+    const handleVerifyAndReset = async () => {
+        setCpLoading(true);
+        try {
+            // 1. Verify OTP -> Get sign_key
+            const res: any = await apiFetch(`/auth/verify_otp?phone=${encodeURIComponent(user?.phone || '')}&code=${otpCode}`, {
+                method: 'GET',
+            });
+
+            // 2. Reset Password immediately using sign_key and stored newPassword
+            await apiFetch('/auth/reset_password', {
+                method: 'POST',
+                body: JSON.stringify({ sign_key: res.sign_key, new_password: newPassword }),
+            });
+
+            alert('Đổi mật khẩu thành công. Vui lòng đăng nhập lại.');
+            router.push('/login');
+        } catch (error: any) {
+            alert(error.message || 'OTP không hợp lệ hoặc hết hạn');
+        } finally {
+            setCpLoading(false);
+        }
+    };
+
+
 
     if (loading) return <div className="p-10 text-center">Đang tải...</div>;
 
@@ -117,12 +202,60 @@ export default function ProfilePage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <p className="text-muted-foreground">Chức năng đổi mật khẩu đang được bảo trì.</p>
-                            <div className="grid w-full items-center gap-1.5 opacity-50 pointer-events-none">
-                                <Label htmlFor="current">Mật khẩu hiện tại</Label>
-                                <Input id="current" type="password" />
-                            </div>
-                            {/* ... disabled inputs ... */}
+                            {cpStep === 'init' && (
+                                <div className="space-y-4">
+                                    <div className="grid w-full items-center gap-1.5">
+                                        <Label>Mật khẩu mới</Label>
+                                        <Input
+                                            type="password"
+                                            value={newPassword}
+                                            onChange={(e) => setNewPassword(e.target.value)}
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                    <div className="grid w-full items-center gap-1.5">
+                                        <Label>Xác nhận mật khẩu</Label>
+                                        <Input
+                                            type="password"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">Sau khi xác nhận, chúng tôi sẽ gửi mã OTP đến <b>{user?.phone || '...'}</b>.</p>
+                                    <Button onClick={handleChangePasswordInit} disabled={cpLoading || !user?.phone}>
+                                        {cpLoading ? "Đang xử lý..." : "Tiếp tục & Gửi OTP"}
+                                    </Button>
+                                </div>
+                            )}
+
+                            {cpStep === 'otp' && (
+                                <div className="space-y-4">
+                                    <div className="text-sm text-center">
+                                        Nhập mã OTP gửi tới <b>{user?.phone}</b>
+                                        <div className="mt-1">
+                                            {timeLeft > 0 ? (
+                                                <span>Mã có hiệu lực trong: <span className="font-bold text-blue-600">{formatTime(timeLeft)}</span></span>
+                                            ) : (
+                                                <span className="text-red-500 font-medium">Mã OTP đã hết hạn</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="grid w-full items-center gap-1.5">
+                                        <Label>Mã OTP</Label>
+                                        <Input
+                                            value={otpCode}
+                                            onChange={(e) => setOtpCode(e.target.value)}
+                                            placeholder="Nhập 6 số OTP"
+                                            maxLength={6}
+                                        />
+                                    </div>
+                                    <Button onClick={handleVerifyAndReset} disabled={cpLoading} className="w-full">
+                                        {cpLoading ? "Đang xác thực..." : "Xác thực & Đổi mật khẩu"}
+                                    </Button>
+                                    <Button variant="ghost" onClick={() => setCpStep('init')} className="w-full">Quay lại</Button>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>

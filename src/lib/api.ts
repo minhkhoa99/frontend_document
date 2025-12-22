@@ -34,11 +34,17 @@ export async function apiFetch<T = any>(endpoint: string, options: RequestInit =
         (headers as any)['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(url, {
-        ...options,
-        headers,
-        // credentials: 'include', // Not needed for manual bearer token unless CORS requires cookies for other reasons
-    });
+    let response;
+    try {
+        response = await fetch(url, {
+            ...options,
+            headers,
+        });
+    } catch (error) {
+        // Network error or failed to fetch
+        console.error('Network Error:', error);
+        throw new Error('Lỗi kết nối hoặc hệ thống. Vui lòng thử lại sau.');
+    }
 
     // Check for 401 - Unauthenticated
     if (response.status === 401 && typeof window !== 'undefined') {
@@ -65,6 +71,11 @@ export async function apiFetch<T = any>(endpoint: string, options: RequestInit =
 
     // Handle Standardized Error Payload
     if (!response.ok) {
+        // If 5xx Server Error or generic
+        if (response.status >= 500) {
+            throw new ApiError('Lỗi hệ thống. Vui lòng thử lại sau.', response.status);
+        }
+
         if (data && data.message) {
             throw new ApiError(data.message, response.status);
         }
