@@ -229,6 +229,20 @@ export default function ForgotPasswordPage() {
                             <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
                                 {loading ? "Đang xác thực..." : "Xác nhận OTP"}
                             </Button>
+                            {timeLeft === 0 && (
+                                <div className="text-center mt-2">
+                                    <span className="text-sm text-gray-500">Bạn không nhận được mã? </span>
+                                    <Button
+                                        type="button"
+                                        variant="link"
+                                        className="text-blue-600 p-0 h-auto font-semibold"
+                                        onClick={() => onSendOtp({ phone: registeredPhone })}
+                                        disabled={loading}
+                                    >
+                                        Gửi lại OTP
+                                    </Button>
+                                </div>
+                            )}
                             <div className="text-center mt-2">
                                 <Button variant="link" onClick={() => setStep('phone')} className="text-sm p-0 h-auto">
                                     Quay lại nhập SĐT
