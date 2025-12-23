@@ -49,6 +49,10 @@ export default function ProfilePage() {
         const fetchProfile = async () => {
             try {
                 const data = await apiFetch<any>('/users/profile');
+                if (data.role === 'vendor') {
+                    router.push('/seller/dashboard');
+                    return;
+                }
                 setUser(data);
                 setFormData({
                     fullName: data.fullName,

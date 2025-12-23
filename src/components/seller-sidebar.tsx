@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import Cookies from 'js-cookie';
 import {
     LayoutDashboard,
     FileText,
@@ -38,11 +39,17 @@ export function SellerSidebar() {
     }, []);
 
     const handleLogout = async () => {
+        const refreshToken = Cookies.get('refreshToken');
         try {
-            await apiFetch('/auth/logout', { method: 'POST' });
+            await apiFetch('/auth/logout', {
+                method: 'POST',
+                body: JSON.stringify({ refresh_token: refreshToken })
+            });
         } catch (e) {
             console.error(e);
         }
+        Cookies.remove('accessToken');
+        Cookies.remove('refreshToken');
         setUser(null);
         window.dispatchEvent(new Event('authChange'));
         router.push('/');

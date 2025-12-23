@@ -54,6 +54,7 @@ export default function UploadPage() {
         title: '',
         description: '',
         price: '',
+        discount: '',
         categoryId: '',
     });
 
@@ -189,6 +190,7 @@ export default function UploadPage() {
                     title: formData.title,
                     description: formData.description,
                     price: parseFloat(formData.price) || 0,
+                    discountPercentage: parseInt(formData.discount) || 0,
                     categoryId: formData.categoryId,
                     fileUrl: uploadedFileUrl,
                     avatar: uploadedAvatarUrl, // Send as avatar
@@ -332,16 +334,30 @@ export default function UploadPage() {
                             </select>
                         </div>
 
-                        {/* Price */}
-                        <div className="space-y-2">
-                            <Label htmlFor="price">Giá bán (VNĐ)</Label>
-                            <Input
-                                id="price"
-                                type="number"
-                                placeholder="Nhập 0 để miễn phí"
-                                value={formData.price}
-                                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                            />
+                        {/* Price & Discount */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="price">Giá bán (VNĐ)</Label>
+                                <Input
+                                    id="price"
+                                    type="number"
+                                    placeholder="Nhập 0 để miễn phí"
+                                    value={formData.price}
+                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="discount">Giảm giá (%) (Tùy chọn)</Label>
+                                <Input
+                                    id="discount"
+                                    type="number"
+                                    placeholder="VD: 10 = giảm 10%"
+                                    max={100}
+                                    min={0}
+                                    value={formData.discount}
+                                    onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
+                                />
+                            </div>
                         </div>
 
                         {/* Description */}

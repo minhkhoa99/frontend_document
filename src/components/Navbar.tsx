@@ -136,32 +136,35 @@ export function Navbar() {
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                {user.role === 'vendor' && (
+                                {user.role === 'vendor' ? (
                                     <Link href="/seller/dashboard">
                                         <DropdownMenuItem>
                                             <LayoutDashboard className="mr-2 h-4 w-4" />
                                             <span>Kênh người bán</span>
                                         </DropdownMenuItem>
                                     </Link>
+                                ) : (
+                                    <>
+                                        <Link href="/cart">
+                                            <DropdownMenuItem>
+                                                <ShoppingCart className="mr-2 h-4 w-4" />
+                                                <span>Giỏ hàng của tôi</span>
+                                            </DropdownMenuItem>
+                                        </Link>
+                                        <Link href="/my-documents">
+                                            <DropdownMenuItem>
+                                                <FileText className="mr-2 h-4 w-4" />
+                                                <span>Tài liệu của tôi</span>
+                                            </DropdownMenuItem>
+                                        </Link>
+                                        <Link href="/profile">
+                                            <DropdownMenuItem>
+                                                <UserIcon className="mr-2 h-4 w-4" />
+                                                <span>Hồ sơ cá nhân</span>
+                                            </DropdownMenuItem>
+                                        </Link>
+                                    </>
                                 )}
-                                <Link href="/cart">
-                                    <DropdownMenuItem>
-                                        <ShoppingCart className="mr-2 h-4 w-4" />
-                                        <span>Giỏ hàng của tôi</span>
-                                    </DropdownMenuItem>
-                                </Link>
-                                <Link href="/my-documents">
-                                    <DropdownMenuItem>
-                                        <FileText className="mr-2 h-4 w-4" />
-                                        <span>Tài liệu của tôi</span>
-                                    </DropdownMenuItem>
-                                </Link>
-                                <Link href="/profile">
-                                    <DropdownMenuItem>
-                                        <UserIcon className="mr-2 h-4 w-4" />
-                                        <span>Hồ sơ cá nhân</span>
-                                    </DropdownMenuItem>
-                                </Link>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={handleLogout}>
                                     <LogOut className="mr-2 h-4 w-4" />

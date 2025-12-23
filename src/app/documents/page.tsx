@@ -53,6 +53,7 @@ interface Document {
     rating?: number; // Simulated
     reviewCount?: number; // Simulated
     level?: string; // Simulated
+    discountPercentage?: number;
 }
 
 export default function DocumentsPage() {
@@ -311,7 +312,7 @@ export default function DocumentsPage() {
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {documents.map((doc) => (
+                                {documents.map((doc: Document) => (
                                     <Card key={doc.id} className="overflow-hidden hover:shadow-lg transition-shadow border-gray-200 flex flex-col h-full bg-white">
                                         <div className="aspect-[4/3] bg-gray-100 relative group overflow-hidden">
                                             {doc.avatar ? (
@@ -326,6 +327,11 @@ export default function DocumentsPage() {
                                                         <div className="text-4xl font-bold mb-2 opacity-20">PDF</div>
                                                         <div className="text-xs uppercase tracking-wider">Xem trước</div>
                                                     </div>
+                                                </div>
+                                            )}
+                                            {doc.discountPercentage && doc.discountPercentage > 0 && (
+                                                <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm z-10">
+                                                    -{doc.discountPercentage}%
                                                 </div>
                                             )}
                                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
@@ -352,9 +358,26 @@ export default function DocumentsPage() {
                                             <p className="text-sm text-gray-500 mb-4">Bởi {doc.author?.fullName || 'Ẩn danh'}</p>
 
                                             <div className="flex items-center justify-between mt-auto">
-                                                <span className="font-bold text-blue-600 text-lg">
-                                                    {doc.price && doc.price.amount > 0 ? `${doc.price.amount.toLocaleString()} đ` : 'Miễn phí'}
-                                                </span>
+                                                <div className="flex flex-col">
+                                                    {doc.price && doc.price.amount > 0 ? (
+                                                        doc.discountPercentage && doc.discountPercentage > 0 ? (
+                                                            <>
+                                                                <span className="text-xs text-gray-400 line-through">
+                                                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(doc.price.amount)}
+                                                                </span>
+                                                                <span className="font-bold text-red-600 text-lg">
+                                                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(doc.price.amount * (1 - doc.discountPercentage / 100))}
+                                                                </span>
+                                                            </>
+                                                        ) : (
+                                                            <span className="font-bold text-blue-600 text-lg">
+                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(doc.price.amount)}
+                                                            </span>
+                                                        )
+                                                    ) : (
+                                                        <span className="font-bold text-green-600 text-lg">Miễn phí</span>
+                                                    )}
+                                                </div>
                                                 <Button
                                                     size="icon"
                                                     variant="ghost"

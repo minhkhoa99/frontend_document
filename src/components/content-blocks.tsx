@@ -27,6 +27,7 @@ interface Document {
     avatar?: string;
     createdAt: string;
     views?: number;
+    discountPercentage?: number;
 }
 
 export function ContentBlocks() {
@@ -136,6 +137,12 @@ export function ContentBlocks() {
                                                 Miễn phí
                                             </div>
                                         )}
+                                        {/* Discount Badge */}
+                                        {doc.price && doc.price.amount > 0 && doc.discountPercentage && doc.discountPercentage > 0 && (
+                                            <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">
+                                                -{doc.discountPercentage}%
+                                            </div>
+                                        )}
                                     </div>
 
                                     <CardHeader className="p-4 pb-2">
@@ -161,11 +168,26 @@ export function ContentBlocks() {
 
                                     <CardFooter className="p-4 pt-0 border-t bg-gray-50/50 mt-auto">
                                         <div className="flex items-center justify-between w-full pt-3">
-                                            <span className="text-lg font-bold text-red-600">
-                                                {doc.price && doc.price.amount > 0
-                                                    ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(doc.price.amount)
-                                                    : 'Miễn phí'}
-                                            </span>
+                                            <div className="flex flex-col">
+                                                {doc.price && doc.price.amount > 0 ? (
+                                                    doc.discountPercentage && doc.discountPercentage > 0 ? (
+                                                        <>
+                                                            <span className="text-xs text-gray-400 line-through">
+                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(doc.price.amount)}
+                                                            </span>
+                                                            <span className="text-lg font-bold text-red-600">
+                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(doc.price.amount * (1 - doc.discountPercentage / 100))}
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-lg font-bold text-red-600">
+                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(doc.price.amount)}
+                                                        </span>
+                                                    )
+                                                ) : (
+                                                    <span className="text-lg font-bold text-green-600">Miễn phí</span>
+                                                )}
+                                            </div>
                                             <Button
                                                 size="sm"
                                                 variant="outline"

@@ -219,17 +219,18 @@ export default function CategoryPage() {
                     <>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                             {documents.map((doc: any) => (
-                                <Card key={doc.id} className="overflow-hidden hover:shadow-lg transition-shadow border-gray-200 flex flex-col h-full bg-white group">
-                                    <div className="aspect-[4/3] bg-gray-100 relative overflow-hidden">
+                                <Card key={doc.id} className="flex flex-col h-full hover:shadow-lg transition-shadow duration-300">
+                                    <div className="aspect-[4/3] w-full overflow-hidden rounded-t-lg bg-gray-100 relative group">
                                         {doc.avatar || doc.fileUrl?.endsWith('.pdf') ? (
-                                            // Avatar or Placeholder logic
                                             doc.avatar ? (
+                                                /* eslint-disable-next-line @next/next/no-img-element */
                                                 <img
                                                     src={doc.avatar}
                                                     alt={doc.title}
-                                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                                                 />
                                             ) : (
+                                                // Placeholder for PDF if no avatar but is PDF (or keep generic)
                                                 <div className="flex h-full items-center justify-center text-gray-400 bg-gray-50">
                                                     <div className="text-center p-4">
                                                         <div className="text-4xl font-bold mb-2 opacity-20">PDF</div>
@@ -238,49 +239,82 @@ export default function CategoryPage() {
                                                 </div>
                                             )
                                         ) : (
-                                            <div className="flex h-full items-center justify-center text-gray-400 bg-gray-50">
-                                                <FileText size={48} className="opacity-20" />
+                                            <div className="h-full w-full flex items-center justify-center bg-gray-50 text-gray-400">
+                                                <div className="text-center">
+                                                    <FileText className="h-12 w-12 opacity-20 mx-auto" />
+                                                </div>
                                             </div>
                                         )}
 
-                                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                                            <div className="flex gap-2">
-                                                <Link href={`/documents/${doc.id}`} className="w-full">
-                                                    <Button size="sm" className="w-full bg-white text-black hover:bg-gray-100" variant="secondary">Xem</Button>
-                                                </Link>
+                                        {/* Badges */}
+                                        {doc.price && doc.price.amount === 0 && (
+                                            <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">
+                                                Miễn phí
+                                            </div>
+                                        )}
+                                        {doc.price && doc.price.amount > 0 && doc.discountPercentage > 0 && (
+                                            <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">
+                                                -{doc.discountPercentage}%
+                                            </div>
+                                        )}
+
+                                        {/* Hover Overlay for View Button (Optional, keeping consistent interaction if desired or stick to Home style completely?) 
+                                           The Home style relies on clicking text/image. Let's keep it simple like Home style but maybe add link wrapping image.
+                                         */}
+                                        <Link href={`/documents/${doc.id}`} className="absolute inset-0" aria-label={`View ${doc.title}`}></Link>
+                                    </div>
+
+                                    <div className="p-4 pb-2 flex-grow">
+                                        <div className="text-xs text-blue-600 font-medium mb-1 truncate">
+                                            {doc.category?.name || 'Tài liệu chung'}
+                                        </div>
+                                        <Link href={`/documents/${doc.id}`} className="group">
+                                            <h3 className="font-semibold text-gray-900 leading-tight group-hover:text-blue-600 transition-colors line-clamp-2 min-h-[2.5rem]" title={doc.title}>
+                                                {doc.title}
+                                            </h3>
+                                        </Link>
+
+                                        <div className="flex items-center justify-between text-sm text-gray-500 mt-2">
+                                            <span>Bởi {doc.author?.fullName || 'Ẩn danh'}</span>
+                                            <div className="flex items-center">
+                                                <Star className="w-3 h-3 text-yellow-400 mr-1 fill-yellow-400" />
+                                                <span>4.5</span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <CardContent className="p-4 flex flex-col flex-1">
-                                        <div className="mb-2">
-                                            <span className="inline-block px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 text-xs font-bold">
-                                                {doc.category?.name || 'Chung'}
-                                            </span>
-                                        </div>
-
-                                        <h3 className="font-bold text-gray-900 line-clamp-2 mb-1 text-base" title={doc.title}>
-                                            <Link href={`/documents/${doc.id}`} className="hover:text-blue-600 transition-colors">
-                                                {doc.title}
-                                            </Link>
-                                        </h3>
-
-                                        <p className="text-sm text-gray-500 mb-4">Bởi {doc.author?.fullName || 'Ẩn danh'}</p>
-
-                                        <div className="flex items-center justify-between mt-auto">
-                                            <span className="font-bold text-blue-600 text-lg">
-                                                {doc.price && doc.price.amount > 0 ? `${doc.price.amount.toLocaleString()} đ` : 'Miễn phí'}
-                                            </span>
+                                    <div className="p-4 pt-0 border-t bg-gray-50/50 mt-auto">
+                                        <div className="flex items-center justify-between w-full pt-3">
+                                            <div className="flex flex-col">
+                                                {doc.price && doc.price.amount > 0 ? (
+                                                    doc.discountPercentage > 0 ? (
+                                                        <>
+                                                            <span className="text-xs text-gray-400 line-through">
+                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(doc.price.amount)}
+                                                            </span>
+                                                            <span className="text-lg font-bold text-red-600">
+                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(doc.price.amount * (1 - doc.discountPercentage / 100))}
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-lg font-bold text-red-600">
+                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(doc.price.amount)}
+                                                        </span>
+                                                    )
+                                                ) : (
+                                                    <span className="text-lg font-bold text-green-600">Miễn phí</span>
+                                                )}
+                                            </div>
                                             <Button
-                                                size="icon"
-                                                variant="ghost"
-                                                className="h-8 w-8 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-full"
+                                                size="sm"
+                                                variant="outline"
+                                                className="hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
                                                 onClick={() => addToCart(doc.id)}
                                             >
-                                                <ShoppingCart className="h-5 w-5" />
+                                                <ShoppingCart className="h-4 w-4 mr-1" /> Thêm
                                             </Button>
                                         </div>
-                                    </CardContent>
+                                    </div>
                                 </Card>
                             ))}
                         </div>
